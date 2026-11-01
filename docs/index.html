@@ -37,8 +37,9 @@
   figure { margin: 18px 0 8px; }
   figure img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
   figcaption { color: var(--muted); font-size: 13.5px; margin-top: 8px; }
-  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14.5px; }
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14.5px; table-layout: fixed; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; word-break: break-word; overflow-wrap: anywhere; }
+  td code { word-break: break-all; }
   th { color: var(--muted); font-weight: 600; }
   .kv { display: flex; gap: 24px; flex-wrap: wrap; margin: 12px 0; }
   .kv div { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
