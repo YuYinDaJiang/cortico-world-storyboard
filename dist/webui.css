@@ -1,0 +1,87 @@
+/* 只补这张卡自己的排版；颜色、按钮、表格都复用宿主的 .sheet / .btn / .tablewrap。 */
+.sb-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sb-note {
+  color: var(--fg-dim, #8a8a8a);
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 8px 10px;
+  border-left: 2px solid var(--accent, #7aa2f7);
+  background: var(--bg-soft, rgba(127, 127, 127, 0.06));
+  border-radius: 4px;
+}
+
+.sb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+}
+
+/* 体检表：状态列不许折行；路径列单行 + 中间省略，点一下复制 */
+.sb-health {
+  table-layout: auto;
+  width: 100%;
+}
+
+.sb-health td:nth-child(1) { white-space: nowrap; }
+.sb-health td:nth-child(2) { white-space: nowrap; min-width: 96px; }
+
+/* 动作区分隔：安装 / 启停 / 维护 三组别挤在一起 */
+.sb-sep {
+  display: inline-block;
+  width: 1px;
+  height: 18px;
+  margin: 0 6px;
+  background: var(--line, rgba(127, 127, 127, 0.35));
+}
+.sb-health td:nth-child(3) { white-space: nowrap; }
+.sb-health td:nth-child(4) { max-width: 38em; overflow: hidden; }
+
+.sb-nowrap {
+  display: inline-block;
+  white-space: nowrap;
+  min-width: 76px;
+}
+
+.sb-path {
+  display: inline-block;
+  max-width: 34em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: copy;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+}
+
+.sb-path:hover {
+  text-decoration: underline dotted;
+}
+
+.sb-path.copied {
+  color: var(--accent, #7aa2f7);
+}
+
+/* 模型与提示词并排；窄屏自动堆叠 */
+.sb-two {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.sb-two > * {
+  flex: 1 1 220px;
+  min-width: 200px;
+}
+
+.sb-name {
+  min-width: 88px;
+  color: var(--fg-dim, #8a8a8a);
+  font-size: 12px;
+}

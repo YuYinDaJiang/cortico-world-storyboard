@@ -1,0 +1,36 @@
+# 运行时数据：一律不进库（World 真正的数据目录在 Coopanion 那边，这里只是防御）
+/asr/
+/cache/
+/media/
+/tmp/
+/v2/
+/data/
+
+# 依赖
+node_modules/
+
+# 模型与运行时安装包（体积大、可重新下载）
+ggml-*.bin
+whisper-*.zip
+*.onnx
+
+# 本机配置与密钥
+.env
+.env.*
+*.local.json
+state.json
+
+# 系统杂项
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# OCR 运行时资产（wheel 缓存 / venv / 安装日志），一律不进库
+ocr/wheels/
+ocr/venv/
+ocr/install.log
+*.part
+
+# 本地输出/临时
+out/

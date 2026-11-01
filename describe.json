@@ -1,0 +1,485 @@
+{
+  "tools": [
+    {
+      "name": "storyboard_status",
+      "description": "Report what the storyboard World can do right now: whether ffmpeg and ffprobe are reachable, where the cache is and how big it is, and whether an ASR endpoint is configured. Read-only; use it when the person asks why a video cannot be turned into a storyboard yet.",
+      "tags": [
+        "read"
+      ],
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      },
+      "summary": {
+        "zh": "报告分镜当前能不能用：ffmpeg/ffprobe、缓存与 ASR 配置。",
+        "en": "Reports whether the storyboard is usable right now: ffmpeg/ffprobe, cache and ASR."
+      }
+    },
+    {
+      "name": "video_storyboard",
+      "description": "Turn a video into storyboard images you can actually cite, instead of guessing what is in it.\n\nEvery frame is ONE SHOT. Its cell is sized by how fast that stretch cuts: a 20-second take\ngets a full-width cell, a machine-gun montage gets 1/8-side cells. Cuts are detected first,\nan integral sampler adds frames inside long moving shots, then a row-packing solver fills each\nimage (optimum for the given size sequence) and opens the next one when it is full.\n\nEach cell is numbered, the numbering continues across images, each image carries a header with\nits own time range and index, and the text index lists \"cell 7 (image 2) = 00:12.76-00:31.40 k=3\"\nso you can cite a moment or ask for a close-up with video_zoom({ cellId: 7 }).\n\nUse it like this:\n- Whole short clip: video_storyboard({ input })\n- Long film, read in order (SEQUENCE): video_storyboard({ input, from: 0, segment: 300 }) —\n  every result prints \"segment 5/22 · 22% watched · 82 min left · next: from=...\"\n- One wide look at a long film (STRUCTURE, spoilers): video_storyboard({ input, maxFrames: 96 })\n\nKNOBS THAT MATTER (there are only three):\n- maxFrames: how many moments you see at most (default 96).\n- strategy: quality | balanced (default) | saver | frugal — each step down shrinks every cell\n  by one tier, fitting more frames per image (fewer tokens, blurrier cells).\n- budget: pixels per image, capped at 640000 (800x800 / 384 vision tokens).\n\nThe manifest prints the smallest cell and its readability, the tier histogram, the fill ratio\nand the token cost, and it warns you when the smallest cells are below readable size.\n\nENGINE: pass engine:\"v2\" to run the older coverage engine instead of the default v1. Caches and downloads of the two engines are separate, so switching costs one scan each.\n\nTRANSCRIPT: for a local file, pass transcriptFile explicitly (SRT or JSON). It is never discovered next to the video. .ass is not supported: convert it first with `ffmpeg -i x.ass x.srt` and pass the .srt. (v2 has no transcriptFile support.)",
+      "tags": [
+        "read",
+        "snapshot"
+      ],
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Local absolute path (mp4/mov/mkv/webm...), or any http(s) link that yt-dlp can resolve — you are responsible for having the right to download it. Links are fetched once at low resolution for scanning; video_zoom re-reads the original stream at high resolution."
+          },
+          "from": {
+            "type": "number",
+            "description": "Window start in seconds (default 0). Only this window is scanned and sampled."
+          },
+          "to": {
+            "type": "number",
+            "description": "Window end in seconds. Omit it to let `segment` size the window: 300 s when from > 0, or the whole file when from = 0. Pass `to` only when you deliberately want a specific range."
+          },
+          "scanGap": {
+            "type": "number",
+            "description": "Minimum seconds between two detected cuts, 0-30. Default 0 = merge nothing. Raise it to collapse machine-gun edits into one boundary (`skim` sets 0.35, `brief` raises it until the whole window fits one image)."
+          },
+          "integral": {
+            "type": "boolean",
+            "description": "Sample extra frames inside long takes by integrating on-screen change (default true). Turn it off to keep ONLY real cuts — `skim` / `brief` do that for you."
+          },
+          "integralSeconds": {
+            "type": "number",
+            "description": "How many seconds of accumulated change one sampled frame stands for, 1-30 (default 6). Smaller = more sampled frames inside long takes; bigger = fewer, and long takes get one big cell each."
+          },
+          "maxFrames": {
+            "type": "integer",
+            "description": "Cap on how many frames you see, 1-10000. **Default 0 = no cap**: every cut becomes a frame and every long moving shot gets extra frames from the integral sampler. Set a number only to bound cost — above it the shortest segments get merged (you lose fast-cut coverage, never long takes)."
+          },
+          "tierMap": {
+            "type": "object",
+            "description": "Override the computed tiers, one entry per source tier: {\"1\":3,\"5\":4}. Keys and values are tiers 1-8 (1 = full width, 8 = 1/8 side). This runs AFTER `strategy`, and **tiers you do not list keep their computed value**. Mapping several tiers to the same value merges their visual size (e.g. {\"5\":4,\"6\":4,\"7\":4,\"8\":4} turns every fast-cut cell into a 1/4 cell). Mapping everything to 1 makes every frame full-width, which multiplies the image count — the manifest always prints the result.",
+            "additionalProperties": false,
+            "properties": {
+              "1": {
+                "type": "integer"
+              },
+              "2": {
+                "type": "integer"
+              },
+              "3": {
+                "type": "integer"
+              },
+              "4": {
+                "type": "integer"
+              },
+              "5": {
+                "type": "integer"
+              },
+              "6": {
+                "type": "integer"
+              },
+              "7": {
+                "type": "integer"
+              },
+              "8": {
+                "type": "integer"
+              }
+            }
+          },
+          "maxSheets": {
+            "type": "integer",
+            "description": "Cap on how many images this call may return, 1-16 (default 8). It is a budget cap, not a layout request: when the packer would exceed it, the shortest segments get merged and the layout is re-solved, so you still get full time coverage — just fewer, longer frames."
+          },
+          "strategy": {
+            "type": "string",
+            "enum": [
+              "full",
+              "standard",
+              "compact",
+              "skim",
+              "brief"
+            ],
+            "description": "Size policy, applied to the tier every frame got from cut density. Each step costs or saves about one tier of cell size (a tier doubles or halves the pixel side): quality = one tier bigger (1/1 stays 1/1) for reading text and faces; balanced = default, and it only shrinks the 1/1 tier to 1/2 so a single frame never eats a whole image; saver = one tier smaller everywhere; frugal = three tiers smaller (cheapest, cell sides down to ~100 px — you will recognise shots, not content)."
+          },
+          "budget": {
+            "type": "integer",
+            "description": "Pixels per image, default 640000 = 800x800. **640000 is the ceiling**: the vision API caps a picture at 800x800 (384 tokens), so anything above that is silently downscaled and the cell sizes printed in the manifest stop being true. Lower it (e.g. 230000) only when you are deliberately trading legibility for bytes."
+          },
+          "segment": {
+            "type": "integer",
+            "description": "Window length in seconds when you pass `from` without `to` (default 300 when from > 0; with from=0 and no segment you get the whole file). This is the SEQUENCE reader: call once with from:0, segment:300, then pass back the `next: from=...` printed at the end of every result — it also prints \"segment 5/22 · 22% watched · 82 min left\". Use 300 for films/episodes, 120-180 for dense action."
+          },
+          "pick": {
+            "type": "string",
+            "enum": [
+              "sharp",
+              "mid",
+              "thumb"
+            ],
+            "description": "Frame selection inside a segment. Default \"sharp\" (Laplacian variance) avoids blurred transition frames."
+          },
+          "burn": {
+            "type": "string",
+            "enum": [
+              "index",
+              "none"
+            ],
+            "description": "What to burn into each cell. Default \"index\" (the cell number, so the model can cite \"cell 5\"). Timecodes are never burned in - they live in the text at 0.01 s precision, and pixels spent on a timecode are pixels lost from the frame."
+          },
+          "transcript": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "off"
+            ],
+            "description": "Default \"auto\": use the embedded subtitle track if present, otherwise ASR when configured. \"off\" skips speech entirely."
+          },
+          "transcriptFile": {
+            "type": "string",
+            "description": "Path to an existing transcript (SRT, or JSON with [{start,end,text}] / [{from,to,text}] / C站 {body:[{from,to,content}]}). When given, the subtitle track and ASR are both skipped — use this when the site already has captions."
+          },
+          "ocr": {
+            "type": "boolean",
+            "description": "Correct ASR text against burned-in on-screen subtitles (local OCR, no extra tokens). Defaults to true when detail=high. Only helps when the video actually has hard-coded subtitles; silently skipped otherwise."
+          },
+          "hotwords": {
+            "type": "string",
+            "description": "Space-separated terms to bias this run's transcription (e.g. \"位错 滑移 柏氏矢量\"). Overrides asr.json for this call only. Use it when the subject has its own vocabulary — a global list from another subject is a negative bias, not a neutral default."
+          },
+          "quality": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "description": "Override the download resolution (http(s) links only; a local file is always read at its own resolution). Normally leave it out: the scan tier is derived from the pixel budget (640k -> 360p, 1.2M -> 720p, 1.65M -> 1080p). low = 360p, medium = 720p, high = 1080p. Turn it up only when video_zoom needs a sharper fallback copy."
+          },
+          "scanHeight": {
+            "type": "integer",
+            "description": "Advanced override: exact download height for http(s) links (120-2160). Prefer `quality` — this one exists for cases where you know the exact pixel budget you want. Takes precedence over `quality` when both are given."
+          },
+          "cookies": {
+            "type": "string",
+            "description": "Path to a Netscape cookies.txt for http(s) links. Falls back to DSH_VIDEO_COOKIES. Required by default: without a signed-in session the available resolution is unpredictable and a 1080p tier can simply be absent from the format list."
+          },
+          "allowAnonymous": {
+            "type": "boolean",
+            "description": "Anonymous fetching is always allowed. Set this to true to suppress the \"resolution not guaranteed\" note when you already know this source is fine without cookies."
+          },
+          "detail": {
+            "type": "string",
+            "enum": [
+              "low",
+              "med",
+              "high"
+            ],
+            "description": "How many characters of transcript per cell: low=60 (is this stretch about X?), med=120 (default), high=400 (quote-level). Truncation lands on a sentence boundary. Use cellRange + textOnly to read one cell in full."
+          },
+          "cellRange": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Only render cells [first, last] (1-based, inclusive) in the text index. For a 2-hour film the full 64-cell index is ~75 KB, which can exceed one tool result — the index says where it stopped and which cellRange to ask for next."
+          },
+          "textOnly": {
+            "type": "boolean",
+            "description": "Return only the text index (respecting cellRange) — no image is produced and no frame is decoded. Use it to page through a long film after the first visual pass; the scan is cached."
+          },
+          "sourceHash": {
+            "type": "boolean",
+            "description": "Also compute the source file SHA-256 and put it in the manifest. Off by default: it reads the whole file, so on a multi-GB video it adds real I/O."
+          },
+          "engine": {
+            "type": "string",
+            "enum": [
+              "v1",
+              "v2"
+            ],
+            "description": "Which algorithm runs. v1 (default) is the current main line: cut-driven tiers, then row packing. v2 is the older 0.3.0 \"coverage\" engine kept side by side for comparison: candidate frames scored for novelty, then coverage selection. Same input, different cells and different token cost."
+          },
+          "detect": {
+            "type": "string",
+            "enum": [
+              "upstream",
+              "own"
+            ],
+            "description": "Which cut detector the analysis asset is built with (only with precomputed:\"auto\", v1, local files). \"upstream\" (default) = the vendored scanShots. \"own\" = our detector: crops the bottom subtitle band, compares normalized luma histograms, then requires the change to be flanked by quiet frames (three-point consistency) and merges shots shorter than 1.5 s. The receipt names the detector: precomputed: miss→built(<key>, own)."
+          },
+          "precomputed": {
+            "type": "string",
+            "enum": [
+              "off",
+              "auto"
+            ],
+            "description": "Analysis-asset reuse (v1 only, local files only). \"off\" (default) scans normally. \"auto\" reuses a previously dumped scan for the same file+window (cuts / per-frame scores / fingerprints), skipping the whole decode; a miss runs one normal scan and saves it for next time. The receipt says which path ran: off / hit(<key>) / miss→built(<key>)."
+          }
+        },
+        "required": [
+          "input"
+        ]
+      },
+      "summary": {
+        "zh": "把视频变成可引用的分镜宫格图，附一份带时间码的清单。",
+        "en": "Turn a video into citable storyboard sheets plus a timestamped manifest."
+      }
+    },
+    {
+      "name": "video_probe",
+      "description": "Read a video's container metadata without decoding a single frame: duration, resolution,\nframe rate, rotation, audio track, subtitle tracks, and a suggested reading plan.\n\nCall this FIRST when you do not already know how long the file is. It costs no image tokens.\nThen read it: for a film / episode / any story use SEQUENCE —\nvideo_storyboard({ input, from: 0, segment: 300 }) and follow the \"next: from=...\" it prints.\nA one-shot overview of the whole file is only for identifying what it is (it spoils the ending\nand makes every cell smaller). video_zoom is for a close-up of one moment.",
+      "tags": [
+        "read"
+      ],
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Local absolute path, or an http(s) link. For a link this resolves metadata only (no download): title, duration, and the resolutions the source actually offers."
+          },
+          "cookies": {
+            "type": "string",
+            "description": "Path to a Netscape cookies.txt. Falls back to DSH_VIDEO_COOKIES."
+          },
+          "allowAnonymous": {
+            "type": "boolean",
+            "description": "Anonymous probing is always allowed. Set this to true to suppress the warning note."
+          }
+        },
+        "required": [
+          "input"
+        ]
+      },
+      "summary": {
+        "zh": "只读容器头：时长、分辨率、音轨、字幕轨，不出图、不下载。",
+        "en": "Container header only: duration, resolution, tracks. No images, no download."
+      }
+    },
+    {
+      "name": "video_locate",
+      "description": "Find where a phrase is spoken in a video: returns timestamped transcript lines that match,\nbest first. Text only - no frame decode, no image, no tokens spent on pixels.\n\nUse this when you know roughly what was said but not when (\"where does it mention X\").\nThen pass the returned from/to window to video_zoom to see that moment.\n\nNeeds a transcript. If video_storyboard already ran on this file in this session, its\ntranscript is reused; otherwise ASR runs for the requested window (slow if the window is long).",
+      "tags": [
+        "read"
+      ],
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Local absolute path or http(s) link. Must be the same string used for video_storyboard if you want its transcript reused."
+          },
+          "query": {
+            "type": "string",
+            "description": "The phrase to look for. Chinese and English both work; punctuation and spacing are ignored. Long quotes match better than single characters."
+          },
+          "from": {
+            "type": "number",
+            "description": "Only search after this second. Default: start of file."
+          },
+          "to": {
+            "type": "number",
+            "description": "Only search before this second. Default: end of file."
+          },
+          "max": {
+            "type": "number",
+            "description": "How many matches to return, 1-20. Default 5."
+          },
+          "transcriptFile": {
+            "type": "string",
+            "description": "Path to an existing SRT/JSON transcript. Skips ASR entirely."
+          },
+          "cookies": {
+            "type": "string",
+            "description": "cookies.txt path for login-gated sources."
+          },
+          "allowAnonymous": {
+            "type": "boolean",
+            "description": "Allow anonymous fetches for links."
+          }
+        },
+        "required": [
+          "input",
+          "query"
+        ]
+      },
+      "summary": {
+        "zh": "纯文本定位：这句话在第几分钟。不读图。",
+        "en": "Find when a line was said; text only."
+      }
+    },
+    {
+      "name": "video_zoom",
+      "description": "Re-read a short window of a video at higher per-cell resolution.\n\nUse it after video_storyboard when one cell needs a closer look: \"what exactly is on screen\nat 01:12-01:20?\" A zoom returns ONE image with few, large cells (default 6), so faces,\nsubtitles and on-screen text become legible — things a 16-cell overview cannot show.\n\nKeep the window short (a few seconds to a minute). For another wide pass use video_storyboard.\nCosts one image (~384 tokens in DSH, host-dependent), like any other tool result with one image.",
+      "tags": [
+        "read",
+        "snapshot"
+      ],
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "input": {
+            "type": "string",
+            "description": "Local absolute path, or the same http(s) link you passed to video_storyboard. A link is re-read from the original stream at high resolution, so cells here can be sharper than the storyboard even when the scan itself used a low tier."
+          },
+          "from": {
+            "type": "number",
+            "description": "Window start in seconds. Required unless cellId is given."
+          },
+          "to": {
+            "type": "number",
+            "description": "Window end in seconds. Required unless cellId is given."
+          },
+          "scanGap": {
+            "type": "number",
+            "description": "Minimum seconds between two detected cuts, 0-30. Default 0 = merge nothing. Raise it to collapse machine-gun edits into one boundary (`skim` sets 0.35, `brief` raises it until the whole window fits one image)."
+          },
+          "integral": {
+            "type": "boolean",
+            "description": "Sample extra frames inside long takes by integrating on-screen change (default true). Turn it off to keep ONLY real cuts — `skim` / `brief` do that for you."
+          },
+          "integralSeconds": {
+            "type": "number",
+            "description": "How many seconds of accumulated change one sampled frame stands for, 1-30 (default 6). Smaller = more sampled frames inside long takes; bigger = fewer, and long takes get one big cell each."
+          },
+          "maxFrames": {
+            "type": "integer",
+            "description": "How many frames for this window, 1-48 (default 9). Frames get a UNIFORM tier ceil(sqrt(n)) so n cells tile a sqrt(n)×sqrt(n) grid in ONE image — 9 frames = 3×3 full. This is the \"re-read a few seconds properly\" tool."
+          },
+          "tierMap": {
+            "type": "object",
+            "description": "Override the computed tiers, one entry per source tier: {\"1\":3,\"5\":4}. Keys and values are tiers 1-8 (1 = full width, 8 = 1/8 side). This runs AFTER `strategy`, and **tiers you do not list keep their computed value**. Mapping several tiers to the same value merges their visual size (e.g. {\"5\":4,\"6\":4,\"7\":4,\"8\":4} turns every fast-cut cell into a 1/4 cell). Mapping everything to 1 makes every frame full-width, which multiplies the image count — the manifest always prints the result.",
+            "additionalProperties": false,
+            "properties": {
+              "1": {
+                "type": "integer"
+              },
+              "2": {
+                "type": "integer"
+              },
+              "3": {
+                "type": "integer"
+              },
+              "4": {
+                "type": "integer"
+              },
+              "5": {
+                "type": "integer"
+              },
+              "6": {
+                "type": "integer"
+              },
+              "7": {
+                "type": "integer"
+              },
+              "8": {
+                "type": "integer"
+              }
+            }
+          },
+          "maxSheets": {
+            "type": "integer",
+            "description": "How many images at most, 1-4 (default 1). A zoom is meant to be one image with a few large cells; raise it only when the window needs more cells than one image holds."
+          },
+          "strategy": {
+            "type": "string",
+            "enum": [
+              "full",
+              "standard",
+              "compact",
+              "skim",
+              "brief"
+            ],
+            "description": "Size policy, default \"quality\" (one tier bigger everywhere). Only lower it if you are re-reading a very busy window and want more frames per image instead of detail."
+          },
+          "pick": {
+            "type": "string",
+            "enum": [
+              "sharp",
+              "mid",
+              "thumb"
+            ],
+            "description": "Frame selection inside each cell. Default \"sharp\"."
+          },
+          "burn": {
+            "type": "string",
+            "enum": [
+              "index",
+              "none"
+            ],
+            "description": "What to burn into each cell. Default \"index\"."
+          },
+          "transcript": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "off"
+            ],
+            "description": "Include subtitle/ASR text for this window. Default \"auto\"."
+          },
+          "transcriptFile": {
+            "type": "string",
+            "description": "Path to an existing transcript (SRT, or JSON with [{start,end,text}] / [{from,to,text}] / C站 {body:[{from,to,content}]}). Skips the subtitle track and ASR."
+          },
+          "detail": {
+            "type": "string",
+            "enum": [
+              "low",
+              "med",
+              "high"
+            ],
+            "description": "Characters of transcript per cell: low=60, med=120 (default), high=400."
+          },
+          "cellId": {
+            "type": "integer",
+            "description": "Zoom by cell number from the last storyboard of this same input (e.g. 3 = the cell labelled 3 in the sheet). Resolves to that cell's absolute time range, so you never copy timestamps by hand. Falls back to an error if no cell map is recorded — then pass from/to."
+          },
+          "quality": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "description": "Sharpness of the close-up frames, for http(s) links. low = 480p, medium = 720p, high = 1080p (default). Raise it when the fine detail is not readable; lower it when the download is too slow. Ignored for local files, which are always read at native resolution."
+          },
+          "zoomHeight": {
+            "type": "integer",
+            "description": "For http(s) links: which resolution to read the original stream at (default 1080). One frame only — cheaper than downloading. Never exceeds what the source itself offers."
+          },
+          "scanHeight": {
+            "type": "integer",
+            "description": "For http(s) links: which resolution the downloaded scan copy uses (default 360). Only matters when zoom has to fall back to the local copy because the direct URL expired — raising it makes that fallback sharper at the cost of a bigger download."
+          },
+          "ocr": {
+            "type": "boolean",
+            "description": "Force hard-subtitle OCR correction on/off. Default: on only when detail is \"high\" (it costs ~3 s of local OCR). Set false to keep the raw ASR text even at high detail."
+          },
+          "cookies": {
+            "type": "string",
+            "description": "Path to a Netscape cookies.txt. Falls back to DSH_VIDEO_COOKIES."
+          },
+          "allowAnonymous": {
+            "type": "boolean",
+            "description": "Anonymous reading is always allowed. Set this to true to suppress the warning note."
+          },
+          "sourceHash": {
+            "type": "boolean",
+            "description": "Also compute the source file SHA-256 and put it in the manifest. Off by default."
+          }
+        },
+        "required": [
+          "input"
+        ]
+      },
+      "summary": {
+        "zh": "按格号或时间窗重看一段：格子少、每格大。",
+        "en": "Look again at one stretch by cell id or time window; fewer, bigger cells."
+      }
+    }
+  ],
+  "events": []
+}

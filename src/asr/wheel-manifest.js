@@ -1,0 +1,343 @@
+/**
+ * OCR wheel 清单（**生成文件，别手改**）。
+ * 生成：node tools/gen-ocr-wheel-manifest.mjs
+ * 来源：清华 simple 页（sha256 取 #sha256，大小取 HEAD Content-Length）
+ * 生成时间：2026-11-01T16:11:24.314Z
+ *
+ * 结构：编译类包按 cp311/cp312/cp313 各一条；opencv-headless 一条 abi3；其余纯 py3-none-any 一条。
+ * 每台机器只下自己那一套（见 wheelsFor）。
+ */
+
+export const WHEEL_MANIFEST = Object.freeze([
+  {
+    pkg: 'onnxruntime', py: 'cp311',
+    file: 'onnxruntime-1.31.1-cp311-cp311-win_amd64.whl',
+    bytes: 14885761,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/69/82/2e2bf967ade9567d77c307533566ef56a19c32e2114fc062a405703def88/onnxruntime-1.31.1-cp311-cp311-win_amd64.whl',
+    sha256: 'c3d91b5de31e2fc82d71bd65b2b22bddee8b49057a3a36338e9a868e0ea90c05',
+  },
+  {
+    pkg: 'onnxruntime', py: 'cp312',
+    file: 'onnxruntime-1.31.1-cp312-cp312-win_amd64.whl',
+    bytes: 14888466,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/45/b2/793b4051d8dc6acb379ead9b72050f0ffa283ca49a6904add2e218b83e2e/onnxruntime-1.31.1-cp312-cp312-win_amd64.whl',
+    sha256: 'ae8a9a351efda685cc59a66226cdefaa37a126c1d66872ca23a2de9425326130',
+  },
+  {
+    pkg: 'onnxruntime', py: 'cp313',
+    file: 'onnxruntime-1.31.1-cp313-cp313-win_amd64.whl',
+    bytes: 14888304,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/59/bf/a1d282b4c753ba3e9b31f4c11abd2bc2390513dc5e3792ca3b78e42401c3/onnxruntime-1.31.1-cp313-cp313-win_amd64.whl',
+    sha256: '0558f29d5f6ac09957390c9c5495931485ee8ae7f0ce781ccee86a0ae5c2348b',
+  },
+  {
+    pkg: 'numpy', py: 'cp311',
+    file: 'numpy-2.4.6-cp311-cp311-win_amd64.whl',
+    bytes: 12608406,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/c5/31/7fc6239c12bce7e931463251cca4426c465e1876ba3cc785402ef4dd8f4e/numpy-2.4.6-cp311-cp311-win_amd64.whl',
+    sha256: '1e254a00cdf42b1e4d5b3d68d33af63268d41340d8885df2ab6470f2e1500147',
+  },
+  {
+    pkg: 'numpy', py: 'cp312',
+    file: 'numpy-2.5.4-cp312-cp312-win_amd64.whl',
+    bytes: 12573091,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/12/33/fefe62073dc8acfd0f2b9ed7c003af2f50aa61555e113e6db02b8f79f145/numpy-2.5.4-cp312-cp312-win_amd64.whl',
+    sha256: 'a7b1b6353e36a7e50de2973a38d705c88ee93adcf120673cee7f45a4a3fa223a',
+  },
+  {
+    pkg: 'numpy', py: 'cp313',
+    file: 'numpy-2.5.4-cp313-cp313-win_amd64.whl',
+    bytes: 12566113,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/90/8c/140a40398a66b4471211be1affdb6ed24c486d581bd28d07b7f2fcb69540/numpy-2.5.4-cp313-cp313-win_amd64.whl',
+    sha256: '8b4d2fd2d34e5f8c9235ee787de5631a37a28402b15cb80814df973d2be54129',
+  },
+  {
+    pkg: 'pillow', py: 'cp311',
+    file: 'pillow-13.0.0-cp311-cp311-win_amd64.whl',
+    bytes: 7278471,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/7d/f6/6e2d96413e4c9dbec12ea584d9e646d602877d4cce3ea669099f959deac6/pillow-13.0.0-cp311-cp311-win_amd64.whl',
+    sha256: 'd7710eb676e9bb68965cb045be0d333b4c0d7f9dfbaa7fbf121385b1588683d3',
+  },
+  {
+    pkg: 'pillow', py: 'cp312',
+    file: 'pillow-13.0.0-cp312-cp312-win_amd64.whl',
+    bytes: 7272166,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/ff/cd/73a79ecdc822076002eb24b5e1e4a530b0bb5310fcb6d239abbec877110b/pillow-13.0.0-cp312-cp312-win_amd64.whl',
+    sha256: 'ff3fe9eb621fbb9db4c4be33ab946f6bac5f98ab50ca8d3260503653656c961b',
+  },
+  {
+    pkg: 'pillow', py: 'cp313',
+    file: 'pillow-13.0.0-cp313-cp313-win_amd64.whl',
+    bytes: 7284777,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/d7/ed/1b16fb66a37e1b9e41370b93b2c614c7da761a5b2a41dc333f7af4639962/pillow-13.0.0-cp313-cp313-win_amd64.whl',
+    sha256: '9dda0788a9932776a75d8bcc020076edc308ce2508b51f6739a45e3158b3fc42',
+  },
+  {
+    pkg: 'shapely', py: 'cp311',
+    file: 'shapely-2.2.0rc1-cp311-cp311-win_amd64.whl',
+    bytes: 1795030,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/ab/62/55456a3eefbd4415cc7f6d873a242ee5559c84a21c66406bee6ecb76348c/shapely-2.2.0rc1-cp311-cp311-win_amd64.whl',
+    sha256: 'bec6ebe4df07ae5b9d2296682b2c2cac06ff8d5e433589af8433ed2231da5ef1',
+  },
+  {
+    pkg: 'shapely', py: 'cp312',
+    file: 'shapely-2.2.0rc1-cp312-cp312-win_amd64.whl',
+    bytes: 1791016,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/cb/08/4c0e1dd126871faadbcede7cbae1a3902a906577b0046d324d0e4d87b5bb/shapely-2.2.0rc1-cp312-cp312-win_amd64.whl',
+    sha256: '7f9617d734939e7b1b7abe63170dbd052548cea7460a24b6913c1d4813899f52',
+  },
+  {
+    pkg: 'shapely', py: 'cp313',
+    file: 'shapely-2.2.0rc1-cp313-cp313-win_amd64.whl',
+    bytes: 1789922,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/8d/20/1845f366c565ec6076819a6b2ca74e785a21fdb401ae91f98fd2925dcfd9/shapely-2.2.0rc1-cp313-cp313-win_amd64.whl',
+    sha256: 'f4e67eb8328a88720e3a769cb74bb2626bf05dfd0265fbdc03c54bb4f7335b6c',
+  },
+  {
+    pkg: 'pyyaml', py: 'cp311',
+    file: 'pyyaml-6.0.3-cp311-cp311-win_amd64.whl',
+    bytes: 158763,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/da/e3/ea007450a105ae919a72393cb06f122f288ef60bba2dc64b26e2646fa315/pyyaml-6.0.3-cp311-cp311-win_amd64.whl',
+    sha256: '9f3bfb4965eb874431221a3ff3fdcddc7e74e3b07799e0e84ca4a0f867d449bf',
+  },
+  {
+    pkg: 'pyyaml', py: 'cp312',
+    file: 'pyyaml-6.0.3-cp312-cp312-win_amd64.whl',
+    bytes: 154003,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/86/bf/899e81e4cce32febab4fb42bb97dcdf66bc135272882d1987881a4b519e9/pyyaml-6.0.3-cp312-cp312-win_amd64.whl',
+    sha256: '5fcd34e47f6e0b794d17de1b4ff496c00986e1c83f7ab2fb8fcfe9616ff7477b',
+  },
+  {
+    pkg: 'pyyaml', py: 'cp313',
+    file: 'pyyaml-6.0.3-cp313-cp313-win_amd64.whl',
+    bytes: 154090,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/97/c9/39d5b874e8b28845e4ec2202b5da735d0199dbe5b8fb85f91398814a9a46/pyyaml-6.0.3-cp313-cp313-win_amd64.whl',
+    sha256: '79005a0d97d5ddabfeeea4cf676af11e647e41d81c9a7722a193022accdb6b7c',
+  },
+  {
+    pkg: 'pyclipper', py: 'cp311',
+    file: 'pyclipper-1.4.0-cp311-cp311-win_amd64.whl',
+    bytes: 104362,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/3a/76/4901de2919198bb2bd3d989f86d4a1dff363962425bb2d63e24e6c990042/pyclipper-1.4.0-cp311-cp311-win_amd64.whl',
+    sha256: 'e9b973467d9c5fa9bc30bb6ac95f9f4d7c3d9fc25f6cf2d1cc972088e5955c01',
+  },
+  {
+    pkg: 'pyclipper', py: 'cp312',
+    file: 'pyclipper-1.4.0-cp312-cp312-win_amd64.whl',
+    bytes: 104619,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/97/77/dfea08e3b230b82ee22543c30c35d33d42f846a77f96caf7c504dd54fab1/pyclipper-1.4.0-cp312-cp312-win_amd64.whl',
+    sha256: 'd1e5498d883b706a4ce636247f0d830c6eb34a25b843a1b78e2c969754ca9037',
+  },
+  {
+    pkg: 'pyclipper', py: 'cp313',
+    file: 'pyclipper-1.4.0-cp313-cp313-win_amd64.whl',
+    bytes: 104007,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/ba/42/0a1920d276a0e1ca21dc0d13ee9e3ba10a9a8aa3abac76cd5e5a9f503306/pyclipper-1.4.0-cp313-cp313-win_amd64.whl',
+    sha256: 'd4b2d7c41086f1927d14947c563dfc7beed2f6c0d9af13c42fe3dcdc20d35832',
+  },
+  {
+    pkg: 'python_bidi', py: 'cp311',
+    file: 'python_bidi-0.6.12-cp311-cp311-win_amd64.whl',
+    bytes: 164366,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/04/05/dcc98dac740499c6ecc954b14b42dc8b9de7e137e0f4cb496206497c6f1f/python_bidi-0.6.12-cp311-cp311-win_amd64.whl',
+    sha256: 'f466c4246e6473ccd60c5faae7d597616a18a058b965fd559ab7f070493ebabf',
+  },
+  {
+    pkg: 'python_bidi', py: 'cp312',
+    file: 'python_bidi-0.6.12-cp312-cp312-win_amd64.whl',
+    bytes: 162859,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/86/ab/704c9706a74f80109ff526d2e2bd19b2a6ddd06417f2c337d6c5dce9c5a4/python_bidi-0.6.12-cp312-cp312-win_amd64.whl',
+    sha256: 'cc83590828d48a727923711a1b4e539f40247cae02d7b6fb6d8e22ef532685e5',
+  },
+  {
+    pkg: 'python_bidi', py: 'cp313',
+    file: 'python_bidi-0.6.12-cp313-cp313-win_amd64.whl',
+    bytes: 162351,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/84/a3/49451e221c1152532d017ceb45684eebb0cf0132efd017e9c40490cdffc1/python_bidi-0.6.12-cp313-cp313-win_amd64.whl',
+    sha256: '78f9e4f61d130304a1eecdf9ebd0fb5c921f3442c3c5628fb1eee31d8bbd4101',
+  },
+  {
+    pkg: 'charset_normalizer', py: 'cp311',
+    file: 'charset_normalizer-3.5.2-cp311-cp311-win_amd64.whl',
+    bytes: 214932,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/e8/fc/fdf8cf52ff21cd5bf158f20978991cf985325842f74283eb6df26c8a39d8/charset_normalizer-3.5.2-cp311-cp311-win_amd64.whl',
+    sha256: '87e50a3e7cb90af586b6c5faf23e302a970415ac73bd7bd90a515a04b427ef96',
+  },
+  {
+    pkg: 'charset_normalizer', py: 'cp312',
+    file: 'charset_normalizer-3.5.2-cp312-cp312-win_amd64.whl',
+    bytes: 207486,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/eb/e6/e6e083884cbcfd49c64865af05027fe7011be7b2d9179524f099a1b611f3/charset_normalizer-3.5.2-cp312-cp312-win_amd64.whl',
+    sha256: '780fbe7cab297b81dad9fb8dc5eb003c0468ffb0d9e5f65068c53a34661a96bc',
+  },
+  {
+    pkg: 'charset_normalizer', py: 'cp313',
+    file: 'charset_normalizer-3.5.2-cp313-cp313-win_amd64.whl',
+    bytes: 206489,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/9c/76/b8ec57f4e9ee3253541abf95e4a462c0175fe8032dcd070f1f2421240942/charset_normalizer-3.5.2-cp313-cp313-win_amd64.whl',
+    sha256: '78456a747de8dc58360ffa581f30a002baf5aa28cb262536545e91f113ed7639',
+  },
+  {
+    pkg: 'opencv-python-headless', py: 'abi3',
+    file: 'opencv_python_headless-5.0.0.93-cp37-abi3-win_amd64.whl',
+    bytes: 43825962,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/b8/88/763b967f7efd7226b82c9fae16d560cba049b1f0c036647e65c610fd636e/opencv_python_headless-5.0.0.93-cp37-abi3-win_amd64.whl',
+    sha256: '829717b6a95554f273e49e357cee3b3a2a26b6f4842fbc1bed2b45bdd8f87e0e',
+  },
+  {
+    pkg: 'rapidocr', py: 'any',
+    file: 'rapidocr-3.10.0-py3-none-any.whl',
+    bytes: 27288134,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/59/07/203065283bba0c5e9c10af3602dc25ab3e59ee54dc2d1d22c8faeabf5ed8/rapidocr-3.10.0-py3-none-any.whl',
+    sha256: '2fc34e26cd0f48514804a94f8832283039c7334076bff60768b1fed9ad068050',
+  },
+  {
+    pkg: 'pypinyin', py: 'any',
+    file: 'pypinyin-0.55.0-py2.py3-none-any.whl',
+    bytes: 840203,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/b9/7b/4cabc76fcc21c3c7d5c671d8783984d30ac9d3bb387c4ba784fca3cdfa3a/pypinyin-0.55.0-py2.py3-none-any.whl',
+    sha256: 'd53b1e8ad2cdb815fb2cb604ed3123372f5a28c6f447571244aca36fc62a286f',
+  },
+  {
+    pkg: 'zhconv', py: 'any',
+    file: 'zhconv-1.4.1-py2.py3-none-any.whl',
+    bytes: 189491,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/10/f5/d9dee803d46ecc0f2d6723b58f0772fe1ef062be326250ca44030ead5983/zhconv-1.4.1-py2.py3-none-any.whl',
+    sha256: '6ef421829768a5a0e1228040049ccf310a149dd3f11ce618a12ab2401b681a4a',
+  },
+  {
+    pkg: 'sympy', py: 'any',
+    file: 'sympy-1.9rc1-py3-none-any.whl',
+    bytes: 6234106,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/81/85/f3dc94d6e61bfe9be7b1664939c9b44b4ae8ebfa074a9d84e43931a3eacd/sympy-1.9rc1-py3-none-any.whl',
+    sha256: 'a1abd5feca9f6b28011e7e7d81a4789032b717c8d36f705bf8947c4142767b5c',
+  },
+  {
+    pkg: 'mpmath', py: 'any',
+    file: 'mpmath-1.5.0a2-py3-none-any.whl',
+    bytes: 632172,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/9f/1d/74a5ae2ff010d48db42f753366e0bec558446e5ab522810049726136a580/mpmath-1.5.0a2-py3-none-any.whl',
+    sha256: 'fe01e8a594a900d2b553659d9587925e6f44c838ab2e22f9de78ef7357ae3ec3',
+  },
+  {
+    pkg: 'protobuf', py: 'any',
+    file: 'protobuf-7.37.0rc1-py3-none-any.whl',
+    bytes: 181464,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/de/0a/c3f826ea06144fb9a3ba288c7b5267e8ea4cfcfcc85d8b4fddf1a9870247/protobuf-7.37.0rc1-py3-none-any.whl',
+    sha256: 'bd29a590f690e5e521aeeaa5f26d7aed05b69f61a35b2083bde58b4832025354',
+  },
+  {
+    pkg: 'flatbuffers', py: 'any',
+    file: 'flatbuffers-25.12.19-py2.py3-none-any.whl',
+    bytes: 26661,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/e8/2d/d2a548598be01649e2d46231d151a6c56d10b964d94043a335ae56ea2d92/flatbuffers-25.12.19-py2.py3-none-any.whl',
+    sha256: '7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4',
+  },
+  {
+    pkg: 'packaging', py: 'any',
+    file: 'packaging-26.3-py3-none-any.whl',
+    bytes: 129956,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl',
+    sha256: 'd7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c',
+  },
+  {
+    pkg: 'coloredlogs', py: 'any',
+    file: 'coloredlogs-15.0.1-py2.py3-none-any.whl',
+    bytes: 46018,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/a7/06/3d6badcf13db419e25b07041d9c7b4a2c331d3f4e7134445ec5df57714cd/coloredlogs-15.0.1-py2.py3-none-any.whl',
+    sha256: '612ee75c546f53e92e70049c9dbfcc18c935a2b9a53b66085ce9ef6a6e5c0934',
+  },
+  {
+    pkg: 'humanfriendly', py: 'any',
+    file: 'humanfriendly-10.0-py2.py3-none-any.whl',
+    bytes: 86794,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/f0/0f/310fb31e39e2d734ccaa2c0fb981ee41f7bd5056ce9bc29b2248bd569169/humanfriendly-10.0-py2.py3-none-any.whl',
+    sha256: '1697e1a8a8f550fd43c2865cd84542fc175a61dcb779b6fee18cf6b6ccba1477',
+  },
+  {
+    pkg: 'pyreadline3', py: 'any',
+    file: 'pyreadline3-3.5.6-py3-none-any.whl',
+    bytes: 85243,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/f7/5e/35c856e186b74678c24927847ad9895a51f1bc02a0c6126477a6c6040064/pyreadline3-3.5.6-py3-none-any.whl',
+    sha256: '8449b734232e42a5dcd74048e39b60db2839a4c38cf3ae2bf7707d58b5389c0d',
+  },
+  {
+    pkg: 'colorama', py: 'any',
+    file: 'colorama-0.4.6rc1-py2.py3-none-any.whl',
+    bytes: 25364,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/5e/78/955c5fa168bee1621aa3bed1cadd2bdd38ea53ac22cf81be9579eac49a95/colorama-0.4.6rc1-py2.py3-none-any.whl',
+    sha256: 'bc3a1efa0b297242dcd0757e2e83d358bcd18bda77735e493aa89a634e74c9bf',
+  },
+  {
+    pkg: 'requests', py: 'any',
+    file: 'requests-2.34.2-py3-none-any.whl',
+    bytes: 73075,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl',
+    sha256: '2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0',
+  },
+  {
+    pkg: 'urllib3', py: 'any',
+    file: 'urllib3-2.8.0-py3-none-any.whl',
+    bytes: 135717,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl',
+    sha256: '0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3',
+  },
+  {
+    pkg: 'certifi', py: 'any',
+    file: 'certifi-2026.10.23-py3-none-any.whl',
+    bytes: 135082,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/32/d1/a3652fe2c19134d0d15922177821d863cbd7e842d53a21bbe7e8e3a1b5ac/certifi-2026.10.23-py3-none-any.whl',
+    sha256: 'e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1',
+  },
+  {
+    pkg: 'idna', py: 'any',
+    file: 'idna-3.20-py3-none-any.whl',
+    bytes: 69583,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl',
+    sha256: 'ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c',
+  },
+  {
+    pkg: 'tqdm', py: 'any',
+    file: 'tqdm-4.70.1-py3-none-any.whl',
+    bytes: 80199,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/a7/03/921a3d3c75785aca9ebfbfcabfbc3a1be12e2ab5265deb026d55a5a3f83e/tqdm-4.70.1-py3-none-any.whl',
+    sha256: 'c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73',
+  },
+  {
+    pkg: 'six', py: 'any',
+    file: 'six-1.17.0-py2.py3-none-any.whl',
+    bytes: 11050,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl',
+    sha256: '4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274',
+  },
+  {
+    pkg: 'omegaconf', py: 'any',
+    file: 'omegaconf-2.4.1rc2-py3-none-any.whl',
+    bytes: 259143,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/0c/0f/eea98e0a6c516c4d5f28ab9de29bf6dc00bb68e334d1f22e2af1bd1cb499/omegaconf-2.4.1rc2-py3-none-any.whl',
+    sha256: '4c7dbb92683503480617be4378b61df3d2765ccd1d2035dbe0d795325c10c143',
+  },
+  {
+    pkg: 'colorlog', py: 'any',
+    file: 'colorlog-6.12.0-py3-none-any.whl',
+    bytes: 12239,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/d4/19/0b6647bf5e331521e55d2b63bfbdc210bd9cd605189273f03614a05f702d/colorlog-6.12.0-py3-none-any.whl',
+    sha256: '30d392604e9110045a2c2aeefc27d7a017abbab63f3a8aee594eac0801df784e',
+  },
+  {
+    pkg: 'typing_extensions', py: 'any',
+    file: 'typing_extensions-4.16.0rc2-py3-none-any.whl',
+    bytes: 45600,
+    url: 'https://pypi.tuna.tsinghua.edu.cn/packages/97/98/13623c5e37f9926de1daf18f71d78d3929e0a811b72eece3397d44b6384e/typing_extensions-4.16.0rc2-py3-none-any.whl',
+    sha256: 'cf9c3552bfb3b2fd670e3101a9b84ad54b2e14d06788fd6a9c48d43a20aa906b',
+  },
+]);
+
+/** 某台机器（3.11/3.12/3.13）真正需要下的那一套。 */
+export function wheelsFor(minor) {
+  const tag = `cp3${minor}`;   // 3.11 → cp311（别写成 cp11）
+  return WHEEL_MANIFEST.filter((e) => e.py === tag || e.py === 'abi3' || e.py === 'any');
+}
+
+export const MANIFEST_TOTAL = 46;
+export const MANIFEST_BYTES_ALL = 191933106;

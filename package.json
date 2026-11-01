@@ -1,0 +1,74 @@
+{
+  "name": "coopanion-video-storyboard",
+  "version": "0.8.8",
+  "private": true,
+  "type": "module",
+  "description": "Coopanion (Cortico) World: turn a video into citable storyboard sheets with timecodes, local whisper.cpp transcription, on-screen subtitle OCR correction, and a pluggable cut detector.",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./world": "./src/world.js",
+    "./health": "./src/health.js",
+    "./state": "./src/state.js"
+  },
+  "files": [
+    "src",
+    "dist",
+    "describe.json",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "keywords": [
+    "cortico-world",
+    "coopanion",
+    "cortico",
+    "coopanion-world",
+    "world",
+    "storyboard",
+    "video",
+    "ffmpeg",
+    "whisper",
+    "ocr"
+  ],
+  "cortico": {
+    "kind": "world",
+    "api": 6,
+    "displayName": "分镜",
+    "locales": {
+      "zh": {
+        "displayName": "分镜",
+        "description": "把视频变成一张可寻址的分镜宫格图：每格带编号与时间码，台词挂在对应格子上。管理页在「服务」：体检 ffmpeg/ffprobe、配置 ASR 端点、查看与清空缓存。"
+      },
+      "en": {
+        "displayName": "Storyboard",
+        "description": "Turn a video into one addressable storyboard sheet: numbered cells with timecodes and their lines. The Service page checks ffmpeg/ffprobe, configures the ASR endpoint, and shows or clears the cache."
+      }
+    },
+    "tags": [
+      "video",
+      "visual"
+    ],
+    "webUiClient": "dist/webui.js",
+    "webUiStyle": "dist/webui.css",
+    "describe": "describe.json"
+  },
+  "scripts": {
+    "check": "node scripts/check.mjs",
+    "describe": "node scripts/gen-describe.mjs",
+    "sync": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-to-extension.ps1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TODO/coopanion-video-storyboard.git"
+  },
+  "homepage": "https://github.com/TODO/coopanion-video-storyboard#readme",
+  "bugs": {
+    "url": "https://github.com/TODO/coopanion-video-storyboard/issues"
+  },
+  "author": "TODO <TODO@example.com>"
+}
