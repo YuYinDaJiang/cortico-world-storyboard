@@ -304,6 +304,27 @@ if (!process.env.DSH_CHECK_VIDEO) {
   }
 }
 
+/* ------------------------------------------- OCR 真实 5 行的最小复现（固定输入） */
+try {
+  const { reconcileLine } = await import(pathToFileURL(join(pkgDir, 'src/vendor/storyboard/ocr-align.js')).href);
+  const py = (s) => s.split(' ');
+  const two = (text, pys) => [{ text, py: py(pys), conf: 0.99 }, { text, py: py(pys), conf: 0.98 }];
+  const cases = [
+    { base: '看着棒学着棒学好记住', basePy: 'kan zhe bang xue zhe bang xue hao ji zhu', ocr: two('看折棒学折棒', 'kan zhe bang xue zhe bang'), expect: (o) => o.startsWith('看折棒学折棒'), why: '0.4s 看着棒→看折棒 仍要改对' },
+    { base: '可为什么第三个系列要选审判敌人节呢', basePy: 'ke wei shen me di san ge xi lie yao xuan shen pan di ren jie ne', ocr: two('可为什么第三个系列要选神探狄仁杰呢', 'ke wei shen me di san ge xi lie yao xuan shen tan di ren jie ne'), expect: (o) => o.includes('神探狄仁杰'), why: '17.4s 判→探 必须纠正' },
+    { base: '但审判敌人节就是能做的成功', basePy: 'dan shen pan di ren jie jiu shi neng zuo de cheng gong', ocr: two('但神探狄仁杰就是能做到成功', 'dan shen tan di ren jie jiu shi neng zuo dao cheng gong'), expect: (o) => o.includes('神探狄仁杰') && o.includes('做到成功'), why: '36.4s 两处都要改对' },
+    { base: '这部剧给大家展现了历史改变剧的上限', basePy: 'zhe bu ju gei da jia zhan xian le li shi gai bian ju de shang xian', ocr: two('这部剧给大家展现了历史改编剧的上限', 'zhe bu ju gei da jia zhan xian le li shi gai bian ju de shang xian'), expect: (o) => o.includes('改编剧'), why: '39.2s 改编剧' },
+  ];
+  for (const c of cases) {
+    const r = reconcileLine({ baseChars: [...c.base], basePy: py(c.basePy), ocr: c.ocr });
+    const out = r.next.join('');
+    if (!c.expect(out)) fail(`OCR 真实样本：${c.why} 失败，实得「${out}」`);
+    else ok(`OCR 真实样本：${c.why}`);
+  }
+} catch (error) {
+  fail(`OCR 真实样本回归抛错：${error instanceof Error ? error.message : String(error)}`);
+}
+
 /* -------------------------------------------------------------------- 汇总 */
 
 rmSync(scratch, { recursive: true, force: true });

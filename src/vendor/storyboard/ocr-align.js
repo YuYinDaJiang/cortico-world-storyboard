@@ -120,6 +120,7 @@ const sim = (a, b) => (a.length && b.length ? lcs(a, b).length / Math.max(a.leng
  */
 export function reconcileLine({ baseChars, basePy, ocr = [] }) {
   const votes = new Map();
+  const warns = [];
   const add = (i, ch, conf) => {
     if (!votes.has(i)) votes.set(i, []);
     votes.get(i).push({ ch, conf });
@@ -137,7 +138,8 @@ export function reconcileLine({ baseChars, basePy, ocr = [] }) {
     for (let n = 0; n < anchors.length - 1; n += 1) {
       const [i1, j1] = anchors[n]; const [i2, j2] = anchors[n + 1];
       const gi = i2 - i1 - 1; const gj = j2 - j1 - 1;
-      if (gi <= 0 || gi !== gj) continue;
+      if (gi <= 0) continue;
+      if (gi !== gj) { warns.push({ at: i1 + 1, asr: gi, ocr: gj }); continue; }
       for (let d = 1; d <= gi; d += 1) {
         const i = i1 + d; const j = j1 + d;
         const oc = chars[j]; const ac = baseChars[i];
@@ -151,8 +153,13 @@ export function reconcileLine({ baseChars, basePy, ocr = [] }) {
   for (const [pos, arr] of votes) {
     const tally = new Map();
     for (const v of arr) tally.set(v.ch, (tally.get(v.ch) ?? 0) + 1);
-    const [ch, count] = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
-    if (count >= 2) chosen.set(pos, { ch, conf: Math.max(...arr.filter((v) => v.ch === ch).map((v) => v.conf)) });
+    const sorted = [...tally.entries()].sort((a, b) => b[1] - a[1]);
+    const [ch, count] = sorted[0];
+    const second = sorted[1]?.[1] ?? 0;
+    // 宁可少改：票数接近（并列或只差一票）不动
+    if (count >= 2 && count - second >= 2) {
+      chosen.set(pos, { ch, conf: Math.max(...arr.filter((v) => v.ch === ch).map((v) => v.conf)) });
+    }
   }
 
   const next = [...baseChars];
@@ -177,7 +184,7 @@ export function reconcileLine({ baseChars, basePy, ocr = [] }) {
   for (let i = 0; i < baseChars.length; i += 1) {
     if (baseChars[i] !== next[i]) diffs.push({ i, was: baseChars[i], now: next[i], py: basePy[i] });
   }
-  return { next, diffs };
+  return { next, diffs, warns };
 }
 
 function grab(ffmpegPath, input, at, out, vf) {
@@ -285,6 +292,7 @@ export async function alignTranscript({
     const changes = [];
     const a2 = [];
     let correctedLines = 0; let correctedChars = 0;
+    const warnList = [];
 
     for (const [k, s] of samples.entries()) {
       const mine = crops.map((c, i) => (c.k === k
@@ -302,11 +310,13 @@ export async function alignTranscript({
       }
       if (!usable.length) continue;
 
-      const { next, diffs } = reconcileLine({
+      const rec = reconcileLine({
         baseChars: base,
         basePy: asrPy[k],
         ocr: usable.map((u) => ({ text: u.text, py: u.py, conf: u.conf })),
       });
+      const { next, diffs } = rec;
+      for (const w of rec.warns ?? []) warnList.push({ ...w, from: s.seg.from });
       const was = base.join('');
       const now = next.join('');
       if (now !== was) {
@@ -328,6 +338,7 @@ export async function alignTranscript({
       status: correctedLines ? 'applied' : 'checked',
       engine: 'rapidocr',
       checked: samples.length,
+      warns: warnList.slice(0, 5),
       fixed: correctedLines,
       chars: correctedChars,
       summary,
