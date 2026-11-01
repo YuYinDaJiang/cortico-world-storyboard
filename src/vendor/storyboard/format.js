@@ -460,6 +460,8 @@ export function formatManifest(result, {
   }
   const planLine = formatPlanLine(result.plan);
   if (planLine) lines.push(planLine);
+  // [World 改动] 画面几乎不动时的一句话提示（紧挨 plan 行，不重复 integral-marks 的数字）
+  if (result.plan?.integralHint) lines.push(result.plan.integralHint);
   if (omitTranscript) {
     lines.push('[transcript omitted here: the sentences for this window were sent separately — '
       + 'match them to cells by their timestamps. Cell times below are the picture side.]');

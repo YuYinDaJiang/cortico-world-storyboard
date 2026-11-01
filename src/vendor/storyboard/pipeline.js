@@ -697,6 +697,31 @@ export async function runStoryboard(opts) {
   if (segs.length < absCuts.length + 1) trace.push(`frames-merged:${absCuts.length + 1 + sampleMarks.length}->${segs.length}`);
   if (strategy !== DEFAULT_STRATEGY) trace.push(`strategy:${DEFAULT_STRATEGY}->${strategy}`);
 
+  // ---- 静态画面提示（只提示，不改行为）----
+  // 依据：PPT / 讲课类片子逐帧分差极小（实测 p50≈0.35、p90≈2.4），积分取帧会在一张幻灯片
+  // 内部插若干"伪切点"，于是一段没变化的画面被切成好几格重复帧。阈值比 PPT 实测值留了余量，
+  // 同时要求"伪切点段"占多数，避免动作片/影视被误报（那类 p50 通常 > 3、p90 两位数）。
+  const STATIC_P50 = 1.0;        // 中位帧差 ≤1.0 才考虑
+  const STATIC_P90 = 5.0;        // 90 分位 ≤5.0（PPT≈2.4；动作片/影视实测 4.3–9.1，被这条挡住）
+  const STATIC_MARK_SHARE = 0.2;  // 伪切点段占比 ≥20%，或切点密度 <3 刀/分钟（PPT 两种都满足）
+  let staticHint = null;
+  let staticStats = null;
+  if (scan.stats?.length) {
+    const vals = scan.stats.map((s) => Number(s.score) || 0).sort((a, b) => a - b);
+    const at = (q) => vals[Math.min(vals.length - 1, Math.floor(vals.length * q))] ?? 0;
+    const p50 = at(0.5);
+    const p90 = at(0.9);
+    const markShare = segs.length ? segs.filter((s) => s.via === 'mark').length / segs.length : 0;
+    staticStats = { p50: +p50.toFixed(2), p90: +p90.toFixed(2), markShare: +markShare.toFixed(3) };
+    const cutsPerMin = winDur > 0 ? absCuts.length / (winDur / 60) : Infinity;
+    if (sampleMarks.length > 0 && p50 <= STATIC_P50 && p90 <= STATIC_P90
+      && (markShare >= STATIC_MARK_SHARE || cutsPerMin < 3)) {
+      staticHint = `hint: 画面几乎不动（p50=${p50.toFixed(2)} · p90=${p90.toFixed(2)}，`
+        + `${Math.round(markShare * 100)}% 的格子来自积分伪切点）——`
+        + '这类幻灯片/讲课类视频用 integral:false 重跑会更整齐：一格一句话，不再有重复帧。';
+    }
+  }
+
   const minCellW = Math.min(...packed.cells.map((c) => Math.round(c.w * canvas.width)));
   const minCellH = Math.min(...packed.cells.map((c) => Math.round(c.h * canvas.height)));
 
@@ -730,6 +755,10 @@ export async function runStoryboard(opts) {
     tiers: tierHistogram(tiers),
     rawTiers: tierHistogram(rawTiers),
     sampleMarks: sampleMarks.length,
+    // [World 改动] 静态画面提示：只写一行，不改任何行为。
+    // 判据（阈值依据见 STATIC_* 常量）：有积分伪切点 + 分数分位数很低 + 伪切点段占比高。
+    ...(staticHint ? { integralHint: staticHint } : {}),
+    ...(staticStats ? { staticStats } : {}),
     pick, burn, scanGap: capGap,
     adaptive: false,
     trace,
