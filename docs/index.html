@@ -62,6 +62,19 @@
 <p class="sub">Coopanion / Cortico 的 World：把视频变成可引用的分镜宫格图，附一份带时间码的清单。<br>
 本页所有截图与数字都是在本机真跑出来的（Windows 11 · Coopanion 0.2.17 · 同一支 B 站视频 0–60s）。</p>
 
+<h2>它能干什么</h2>
+<p>一支视频丢进来，出来一张<strong>分镜宫格图</strong>和一份<strong>带时间码的清单</strong>：每个格子是一个镜头，标着编号和时间范围，可以直接引用「cell 7 = 00:12.76–00:31.40」。</p>
+<p>格子按镜头的稠密程度分配大小：一个 20 秒的长镜头给整幅宽，一串 0.3 秒的蒙太奇缩成 1/8 格。所以一张图能装下几十个镜头，又不会为了快剪白白浪费 token。</p>
+<p>四个工具，各管一段：</p>
+<table>
+  <tr><th>工具</th><th>干什么</th><th>什么时候用</th></tr>
+  <tr><td><code>video_probe</code></td><td>只读文件头：多长、多大、有没有字幕轨</td><td>动手之前先看看这片子值不值得读</td></tr>
+  <tr><td><code>video_storyboard</code></td><td>出宫格图 + 时间码清单，带本地转写与硬字幕 OCR</td><td>想快速看懂一支片子、写摘要、做解说稿</td></tr>
+  <tr><td><code>video_locate</code></td><td>只查台词，不取帧，纯文本返回</td><td>「这片子哪一秒说到了 X」</td></tr>
+  <tr><td><code>video_zoom</code></td><td>把某一格那几秒放大重读</td><td>字幕、人名、小字看不清时</td></tr>
+</table>
+<p>一个真数：一支 24 分钟影视解说，<strong>37 张图、14,208 token</strong> 就能把全片过一遍；同一支片子换成上游逐帧截取，是 94 张图、36,096 token。</p>
+
 <h2>安装（从本机目录）</h2>
 <p>先完全退出 Coopanion，把仓库目录复制或 junction 到扩展目录，然后在
 <code>extensions/package.json</code> 的 <code>dependencies</code> 里加一行：</p>
