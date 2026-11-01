@@ -155,6 +155,41 @@ V2 没有取流层：`engine:"v2"` 时由适配层用 yt-dlp 把片子下到 `v2
 wheel 缓存、离线 pip），已存在的逐项跳过。**OCR 需要 Python 3.11–3.13**——这个 Python 只为装
 rapidocr 用；可以自己装，也可以用别的方式装 rapidocr（体检表会把「有没有 / 版本对不对」写清楚）。
 
+## 用法（`video_storyboard` 的五个开关）
+
+五个参数都是可选的，默认值保持上游行为；按需打开即可。
+
+| 参数 | 取值 | 用途 |
+|---|---|---|
+| `integral` | `true`（默认）/ `false` | 是否在长镜头内部**按画面变化补采样帧**。补出来的时刻不是真切点（业内叫"伪切点"），静态画面里会把一张幻灯片切成好几格。**幻灯片 / 讲课 / 长时间停在字上**的片子建议 `false`：一格一句话，不再有重复帧 |
+| `integralSeconds` | `1`–`30`，默认 `6` | 只在 `integral:true` 时有效。**值越小补得越多**（每累积 `N` 秒的"画面变化量"就补一帧）；静态素材调到 `12`–`20` 能明显减少重复格 |
+| `detect` | `"upstream"`（默认）/ `"own"` | 切点检测器。`own` 是我们那套：裁掉底部字幕带 → 直方图差 → 三点一致性 → 短镜头合并；B 站这种**底部有硬字幕**的片子用它切点会干净很多。只在同时给了 `precomputed:"auto"` 时生效 |
+| `precomputed` | `"off"`（默认）/ `"auto"` | 分析资产复用：第一次扫描的结果落盘（`<dataDir>/precomputed/`），之后换格数 / 换档位 / 换窗口都直接读盘，不再解码整片。回执里会写明 `hit(...)` 还是 `miss→built(...)` |
+| `transcript` | `"auto"`（默认）/ `"off"` | 台词来源。`auto` = 有内嵌字幕轨就用，没有就本地 ASR；`off` = 完全不要台词（只出图，最省时间） |
+| `transcriptFile` | 本地路径（`.srt` / JSON） | 显式指定字幕文件，**优先级最高**，会跳过字幕轨与 ASR。注意：不会去同目录自动找同名 `.srt`，必须显式传；`.ass` 不解析，先用 `ffmpeg -i x.ass x.srt` 转一道 |
+| `tierMap` | 形如 `{ "3": 2, "4": 1 }` | 按段的**序号**覆盖格子档位（数字越大格子越大，1 = 整幅）。清单里会回显 `tierMap=3->2,4->1`，方便复核是否真的生效 |
+
+最短示例（本地文件、关掉伪切点、用自己的检测器、复用扫描结果）：
+
+```jsonc
+{ "input": "D:/media/lecture.mp4", "from": 0, "to": 300,
+  "integral": false, "detect": "own", "precomputed": "auto" }
+```
+
+只想要图、不要台词（最快）：
+
+```jsonc
+{ "input": "D:/media/clip.mp4", "transcript": "off" }
+```
+
+已有字幕文件时（跳过 ASR）：
+
+```jsonc
+{ "input": "D:/media/film.mp4", "transcriptFile": "D:/media/film.srt" }
+```
+
+> 画面几乎不动时，清单会多一行 `hint:`，建议用 `integral:false` 重跑 —— 那是自动判定的，不需要自己判断。
+
 ## 卸载
 
 1. 退出 Coopanion。

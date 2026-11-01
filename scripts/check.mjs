@@ -5,7 +5,7 @@
  * 检查项与 Coopanion 的 dryMountWorld 对齐（面板 id 形状、工具形状、create 纯净、webUi 声明），
  * 另外多查两条这一步最在意的：panel id 有没有 service、浏览器产物是不是真导出它。
  */
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -205,6 +205,59 @@ try {
   await world.stop();
 } catch (error) {
   fail(`invoke 回路抛错：${error.message}`);
+}
+
+/* ------------------------------------------- integral:false 的逃生口（可选） */
+// 需要 ffmpeg + 一支本地视频：DSH_CHECK_VIDEO=<path> npm run check
+// 断言：关掉积分取帧后 sampleMarks 必须是 0，且所有帧的 via 只能是 cut / start，不许有 mark。
+if (!process.env.DSH_CHECK_VIDEO) {
+  warn('integral:false 断言跳过（设 DSH_CHECK_VIDEO=<本地视频> 可跑；需要 ffmpeg）');
+} else if (!existsSync(process.env.DSH_CHECK_VIDEO)) {
+  fail(`DSH_CHECK_VIDEO 指向的文件不存在：${process.env.DSH_CHECK_VIDEO}`);
+} else {
+  let integralScratch = null;
+  try {
+    const { runStoryboard } = await import(pathToFileURL(join(pkgDir, 'src/vendor/storyboard/pipeline.js')).href);
+    const { setStoryboardPaths } = await import(pathToFileURL(join(pkgDir, 'src/vendor/storyboard/world-paths.js')).href);
+    integralScratch = mkdtempSync(join(tmpdir(), 'sb-check-integral-'));
+    const dirs = {
+      cache: join(integralScratch, 'cache'),
+      temp: join(integralScratch, 'temp'),
+      media: join(integralScratch, 'media'),
+    };
+    for (const d of Object.values(dirs)) mkdirSync(d, { recursive: true });
+    setStoryboardPaths(dirs);
+
+    const r = await runStoryboard({
+      input: process.env.DSH_CHECK_VIDEO, from: 0, to: 60,
+      integral: false, encode: false, cache: false, transcript: 'off',
+    });
+    const marks = r.plan?.sampleMarks;
+    const cuts = r.cuts?.length ?? 0;
+    const frames = r.plan?.frames ?? 0;
+    const cells = (r.sheets ?? []).flatMap((s) => s.cells ?? []);
+    const vias = [...new Set(cells.map((c) => c.via).filter(Boolean))].sort();
+    const markCells = cells.filter((c) => c.via === 'mark').length;
+
+    if (marks !== 0) {
+      fail(`integral:false 之后 plan.sampleMarks 应为 0，实际 ${marks}`
+        + '（伪切点没关掉：确认 boardOptions 把 integral 透传到了 pipeline）');
+    } else if (frames > cuts + 1) {
+      // 边界只可能来自切点：帧数最多 cuts+1（更少是正常的——贴边/过短的切点会被并掉）
+      fail(`integral:false 之后帧数 ${frames} 多于「切点+1」= ${cuts + 1}`
+        + '——多出的边界只可能是伪切点，说明没清干净');
+    } else if (markCells > 0) {
+      fail(`integral:false 之后仍有 ${markCells} 格 via='mark'`
+        + `（共 ${cells.length} 格，via=${vias.join('/')}）—— 伪段没有清干净`);
+    } else {
+      ok(`integral:false 逃生口：sampleMarks=0，${frames} 帧 = ${cuts} 个真切点 + 1`
+        + `，via=${vias.join('/') || '未暴露（按帧数校验）'}`);
+    }
+  } catch (error) {
+    fail(`integral:false 断言抛错：${error instanceof Error ? error.message : String(error)}`);
+  } finally {
+    if (integralScratch) rmSync(integralScratch, { recursive: true, force: true });
+  }
 }
 
 /* -------------------------------------------------------------------- 汇总 */
