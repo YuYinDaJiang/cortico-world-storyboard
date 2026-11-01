@@ -73,7 +73,7 @@
   <tr><td><code>video_locate</code></td><td>只查台词，不取帧，纯文本返回</td><td>「这片子哪一秒说到了 X」</td></tr>
   <tr><td><code>video_zoom</code></td><td>把某一格那几秒放大重读</td><td>字幕、人名、小字看不清时</td></tr>
 </table>
-<p>一个真数：一支 24 分钟影视解说，<strong>37 张图、14,208 token</strong> 就能把全片过一遍；同一支片子换成上游逐帧截取，是 94 张图、36,096 token。</p>
+<p>一个真数：一支 24 分钟影视解说，<strong>37 张图、14,208 token</strong> 就能把全片过一遍；同一支片子改用上游默认的切点检测，是 94 张图、36,096 token（1440 秒全片，分五段跑，两组参数相同）。</p>
 
 <h2>安装（从本机目录）</h2>
 <p>先完全退出 Coopanion，把仓库目录复制或 junction 到扩展目录，然后在
