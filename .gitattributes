@@ -1,0 +1,13 @@
+# 统一换行，但**许可文件保持字节不变**（Apache-2.0 要求 LICENSE/NOTICE 原样分发）
+* text=auto
+
+LICENSE -text
+NOTICE -text
+src/vendor/storyboard/LICENSE -text
+src/vendor/storyboard/NOTICE -text
+src/vendor/storyboard-v2/LICENSE -text
+src/vendor/storyboard-v2/NOTICE -text
+
+# Windows 脚本需要 CRLF，否则 PowerShell 5.1 解析会出问题
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
