@@ -11,6 +11,8 @@ Coopanion / Cortico 的 World：把视频变成可引用的分镜宫格图，附
 零运行时依赖（`dependencies` 为空）。外部程序 ffmpeg / ffprobe / yt-dlp / whisper.cpp / Python 都由使用者
 显式安装或指定，包本身不下载任何东西。
 
+> 带图的展示页（安装步骤 + 六组真跑对比）：[`docs/index.html`](docs/index.html)——纯静态，浏览器直接打开。
+
 ## 与上游的差异
 
 算法层几乎原样，改动集中在「落点」和「新增能力」两类：

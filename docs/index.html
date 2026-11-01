@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分镜 · coopanion-video-storyboard</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #fbfbfa; --fg: #1c1c1c; --muted: #666; --line: #e3e3e0;
+    --card: #fff; --code-bg: #f4f4f2; --accent: #3b6ea5; --good: #1f7a3d; --warn: #8a5a00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16171a; --fg: #e8e8e6; --muted: #9a9a97; --line: #2c2e33;
+      --card: #1d1f23; --code-bg: #202227; --accent: #7aa7d9; --good: #6cc48b; --warn: #d8a458;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.7 -apple-system, "Segoe UI", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  }
+  main { max-width: 880px; margin: 0 auto; padding: 48px 20px 80px; }
+  h1 { font-size: 34px; margin: 0 0 6px; letter-spacing: .5px; }
+  h2 { font-size: 21px; margin: 52px 0 12px; padding-top: 18px; border-top: 1px solid var(--line); }
+  h3 { font-size: 17px; margin: 26px 0 8px; }
+  p { margin: 10px 0; }
+  .sub { color: var(--muted); margin-bottom: 26px; }
+  code, pre { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }
+  code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 14px; }
+  pre {
+    background: var(--code-bg); padding: 14px 16px; border-radius: 8px; overflow-x: auto;
+    font-size: 13.5px; line-height: 1.55; border: 1px solid var(--line);
+  }
+  pre code { background: none; padding: 0; }
+  figure { margin: 18px 0 8px; }
+  figure img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  figcaption { color: var(--muted); font-size: 13.5px; margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  .kv { display: flex; gap: 24px; flex-wrap: wrap; margin: 12px 0; }
+  .kv div { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+  .kv b { font-size: 20px; display: block; }
+  .kv span { color: var(--muted); font-size: 13px; }
+  blockquote {
+    margin: 14px 0; padding: 12px 16px; border-left: 3px solid var(--accent);
+    background: var(--card); border-radius: 0 8px 8px 0; font-size: 14.5px;
+  }
+  .good { color: var(--good); } .warn { color: var(--warn); }
+  footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; }
+  a { color: var(--accent); }
+  .bad { text-decoration: line-through; opacity: .7; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>分镜</h1>
+<p class="sub">Coopanion / Cortico 的 World：把视频变成可引用的分镜宫格图，附一份带时间码的清单。<br>
+本页所有截图与数字都是在本机真跑出来的（Windows 11 · Coopanion 0.2.17 · 同一支 B 站视频 0–60s）。</p>
+
+<h2>安装（从本机目录）</h2>
+<p>先完全退出 Coopanion，把仓库目录复制或 junction 到扩展目录，然后在
+<code>extensions/package.json</code> 的 <code>dependencies</code> 里加一行：</p>
+<pre><code># 1) 放进扩展目录
+%LOCALAPPDATA%\Programs\Coopanion\data\extensions\node_modules\coopanion-video-storyboard
+
+# 2) extensions\package.json 里加依赖
+"coopanion-video-storyboard": "link:&lt;path-to-this-repo&gt;"
+
+# 3) 启动 Coopanion → 设置 → World → 「分镜」→ 启用</code></pre>
+<p>外部程序不用手工装：服务页「一键安装（small）」分五项处理（whisper 运行时 / 模型 / Python venv /
+wheel 缓存 / 离线 pip），已存在的逐项跳过。<strong>OCR 需要 Python 3.11–3.13</strong>——这个 Python
+只为装 rapidocr 用；可以自己装，也可以用别的方式装 rapidocr。</p>
+
+<h2>最常用的三条用法</h2>
+<pre><code>// ① 幻灯片 / 讲课：关掉积分伪切点，一格一句话
+{ "input": "D:/media/lecture.mp4", "integral": false }
+
+// ② 底部有硬字幕的片子：用自带检测器 + 复用扫描结果
+{ "input": "D:/media/bilibili.mp4", "detect": "own", "precomputed": "auto" }
+
+// ③ 只要图、不要台词（最快）
+{ "input": "D:/media/clip.mp4", "transcript": "off" }</code></pre>
+
+<h2>1. 积分伪切点：开 vs 关</h2>
+<p>同一支视频（0–60s）、同一套参数，只切 <code>integral</code>。<code>true</code> 时会在长镜头内部
+按“画面变化量累积”补采样帧，这些时刻不是真切点，于是多出重复格。</p>
+<figure>
+  <img src="img/integral-true.png" alt="integral:true 的分镜">
+  <figcaption><code>integral: true</code>（默认）· <b>69 帧</b> · 9 个伪切点 · 4 张图 · 4.8 s</figcaption>
+</figure>
+<figure>
+  <img src="img/integral-false.png" alt="integral:false 的分镜">
+  <figcaption><code>integral: false</code> · <b>58 帧</b> · 0 个伪切点 · 2 张图 · 4.3 s（真切点仍是 58 个，一个没少）</figcaption>
+</figure>
+
+<h2>2. 切点检测：upstream vs own</h2>
+<p>同一支视频。上游检测对底部硬字幕敏感，字幕一换就被当成切点；<code>detect:"own"</code> 先裁掉底部字幕带，
+再做直方图差 + 三点一致性 + 短镜头合并。</p>
+<div class="kv">
+  <div><b>54</b><span>upstream 切点 · 65 帧 · 3.5 s（含首次扫描落盘）</span></div>
+  <div><b>14</b><span>own 切点 · 24 帧 · 1.8 s（含首次扫描落盘）</span></div>
+</div>
+<figure>
+  <img src="img/detect-upstream.png" alt="detect upstream 分镜">
+  <figcaption><code>detect: "upstream"</code> · 54 切点 / 65 帧 / 3 张图 · 3.5 s</figcaption>
+</figure>
+<figure>
+  <img src="img/detect-own.png" alt="detect own 分镜">
+  <figcaption><code>detect: "own"</code> · 14 切点 / 24 帧 / 2 张图 · 1.8 s</figcaption>
+</figure>
+
+<h2>3. 分析资产复用（precomputed）</h2>
+<p>第一次扫描落盘（<code>miss→built</code>），第二次同一个窗口直接读盘（<code>hit</code>），不再解码视频。</p>
+<table>
+  <tr><th>调用</th><th>状态</th><th>耗时</th><th>切点</th></tr>
+  <tr><td>第 1 次</td><td><code>miss→built</code></td><td>1.8 s</td><td>14</td></tr>
+  <tr><td>第 2 次</td><td><code>hit</code></td><td><b>1.0 s</b></td><td>14（完全一致）</td></tr>
+</table>
+<p>窗口越大差距越明显：整片分析一次之后，换格数、换档位、换窗口都只是重新拼图。</p>
+
+<h2>4. 硬字幕 OCR 纠正</h2>
+<p>同一段 0–60s、<code>detail: "high"</code>：<code>ocr: false</code> 13.3 s；
+<code>ocr: true</code> 31.4 s，结果是 <code class="good">ocr: corrected 5 lines / 14 chars (engine=rapidocr, conf≥0.85)</code>。</p>
+<table>
+  <tr><th>ASR 原文</th><th>OCR 纠正后</th></tr>
+  <tr><td class="bad">可为什么第三个系列要选审判敌人节呢</td><td>可为什么第三个系列要选神判狄仁杰呢</td></tr>
+  <tr><td class="bad">但审判敌人节就是能做的成功</td><td>但神判狄仁杰就是能做的成功</td></tr>
+  <tr><td class="bad">这部剧给大家展现了历史改变剧的上限</td><td>这部剧给大家展现了历史改编剧的上限</td></tr>
+  <tr><td class="bad">能知道敌人节这个名字</td><td>能知道狄仁杰这个名字</td></tr>
+  <tr><td class="bad">看着棒学着棒学好记住</td><td>看折棒学折棒学好记住 <span class="warn">← 这一处纠错了，OCR 也会认错字</span></td></tr>
+</table>
+<p>OCR 不是全对：它按“同音 + 高置信度 + 至少两帧一致”才改，改得少但基本不改坏；上表最后一行就是反例，留着没藏。</p>
+
+<h2>5. 静态画面提示（不改行为，只提示）</h2>
+<p>画面几乎不动时，清单里会多出一行，建议重跑参数：</p>
+<blockquote>hint: 画面几乎不动（p50=0.00 · p90=0.00，63% 的格子来自积分伪切点）——这类幻灯片/讲课类视频用 integral:false 重跑会更整齐：一格一句话，不再有重复帧。</blockquote>
+<table>
+  <tr><th>样本</th><th>p50</th><th>p90</th><th>伪切点段占比</th><th>是否提示</th></tr>
+  <tr><td>静态 PPT 类（120s，6 页）</td><td>0.00</td><td>0.00</td><td>62.5%</td><td class="good">出提示</td></tr>
+  <tr><td>动作类（testsrc2）</td><td>2.93</td><td>4.27</td><td>26.5%</td><td>不出</td></tr>
+  <tr><td>真实影视 0–60s</td><td>0.54</td><td>9.11</td><td>28.4%</td><td>不出</td></tr>
+</table>
+
+<h2>6. 体检表：Python / OCR 三态</h2>
+<p>服务页体检表现在会多两行，缺什么写什么（不教怎么装，只说用途与可选项）。</p>
+<table>
+  <tr><th>状态</th><th>Python 行</th><th>OCR 行</th></tr>
+  <tr><td>就绪</td><td><span class="good">可用</span> · 3.11.18 · <code>…\storyboard\ocr\venv\Scripts\python.exe</code></td>
+      <td><span class="good">可用</span> · rapidocr 3.10.0 · onnxruntime 1.31.1 · <code>…\storyboard\ocr\venv</code></td></tr>
+  <tr><td>有 Python、没引擎</td><td><span class="good">可用</span> · 3.11.18</td>
+      <td><span class="warn">引擎未就绪</span> · 缺 rapidocr / onnxruntime</td></tr>
+  <tr><td>没有 Python</td><td><span class="warn">未找到</span> · — · 未找到 3.11–3.13（OCR 需要 Python 3.11–3.13）</td>
+      <td><span class="warn">不可用</span> · 安装 OCR 需要 Python 3.11–3.13；可自行安装，或用别的方式装 rapidocr</td></tr>
+  <tr><td>版本过高（3.15）</td><td><span class="warn">版本过高</span> · 3.15.0 · 高于 3.13，该版本暂无可用 wheel</td>
+      <td><span class="warn">不可用</span></td></tr>
+</table>
+<p>判据是区间 <b>3.11 ≤ v ≤ 3.13</b>：onnxruntime 等编译包只有 cp311/cp312/cp313 的 win_amd64 wheel，
+3.14/3.15 装了也跑不起来。</p>
+
+<footer>
+  <p>这是 <a href="https://github.com/SAOS-3624/dsh-video-storyboard">SAOS-3624/dsh-video-storyboard</a> 0.6.0
+  （提交 <code>e124ae6</code>）的 fork，按其 <b>Apache-2.0</b> 许可分发：上游 <code>LICENSE</code> 与
+  <code>NOTICE</code> 原样保留在仓库根目录，逐文件改动见
+  <a href="https://github.com/YuYinDaJiang/coopanion-video-storyboard">本仓库</a> 的
+  <code>README</code>「与上游的差异」与各 <code>VENDOR.md</code>。</p>
+  <p>本仓库：<a href="https://github.com/YuYinDaJiang/coopanion-video-storyboard">YuYinDaJiang/coopanion-video-storyboard</a>
+  · 许可：Apache-2.0 · 修改部分 Copyright 2026 YuYinDaJiang</p>
+</footer>
+
+</main>
+</body>
+</html>
