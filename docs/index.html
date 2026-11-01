@@ -132,12 +132,13 @@ wheel 缓存 / 离线 pip），已存在的逐项跳过。<strong>OCR 需要 Pyt
 <table>
   <tr><th></th><th>修前</th><th>修后</th></tr>
   <tr><td>纠正行数 / 字数</td><td>5 行 / 14 字</td><td>5 行 / 14 字</td></tr>
-  <tr><td>替换正确</td><td>2 / 5</td><td><b>5 / 5</b></td></tr>
-  <tr><td>误改（false correction）</td><td><b>2 / 5</b>（都是 探 → 判）</td><td><b>0</b></td></tr>
-  <tr><td>与画面逐字一致</td><td>2 / 5</td><td>3 / 5（另 2 行是<b>漏字</b>，不是改错）</td></tr>
+  <tr><td>完全正确（逐字一致）</td><td>2 / 5</td><td><b>3 / 5</b></td></tr>
+  <tr><td>部分正确（替换对、漏首尾字）</td><td>1 / 5</td><td>2 / 5</td></tr>
+  <tr><td><b>错（false correction）</b></td><td><b>2 / 5</b>（都是 探 → 判）</td><td><b>0</b></td></tr>
   <tr><td>字级一致</td><td>61 / 67</td><td><b>63 / 67</b></td></tr>
 </table>
-<p>「替换正确 5/5、误改 0」是这一轮的核心结论；逐字一致只有 3/5，差的两行是<strong>画面上的字比识别到的多</strong>（多出的首尾字没法凭空补），不是把对的改坏了。</p>
+<p><b>核心结论是“错的行从 2 降到 0”</b>：5 行里 3 行完全正确、2 行部分正确（漏了画面上的首尾字，只能靠 A2 标记，不该硬补）。
+加严规则（票差 ≥2 才改）让 45.0s 那行少改一个字，字级从 64 掉到 63——这是“宁可少改”的代价，不是退步。</p>
 
 <h3>那个 bug 是什么</h3>
 <p><strong>原因</strong>：逐字投票之前用 <code>lcs()</code> 按<strong>拼音</strong>把 OCR 的字对齐到 ASR 的句子上。
