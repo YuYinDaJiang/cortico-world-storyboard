@@ -108,6 +108,78 @@ function lcs(a, b) {
 }
 const sim = (a, b) => (a.length && b.length ? lcs(a, b).length / Math.max(a.length, b.length) : 0);
 
+/**
+ * 逐字对账：把 OCR 读到的字投到 ASR 句子上，返回替换后的字符数组。
+ *
+ * [World 修复] 旧实现只用 pinyin LCS 的匹配对投票——**拼音不同的字永远进不了投票**。
+ * 「审判敌人节」(pan) vs 「神探狄仁杰」(tan) 里「判/探」拼音不同 → 这一列没有票 →
+ * 保留 ASR 的「判」，于是输出「神判」这种**两个源都没有**的混血句子（bug）。
+ *
+ * 修法：在相邻两个 LCS 锚点之间，如果**两侧缺口等长**，就把缺口里逐位配对投票；
+ * 缺口长度不等（ASR 多字/少字）时**不投票**，避免整体串位。
+ */
+export function reconcileLine({ baseChars, basePy, ocr = [] }) {
+  const votes = new Map();
+  const add = (i, ch, conf) => {
+    if (!votes.has(i)) votes.set(i, []);
+    votes.get(i).push({ ch, conf });
+  };
+  for (const u of ocr) {
+    const chars = [...u.text];
+    const pairs = lcs(basePy, u.py);
+    for (const [i, j] of pairs) {
+      const oc = chars[j]; const ac = baseChars[i];
+      if (!oc || oc === ac) continue;
+      add(i, oc, u.conf);
+    }
+    // 缺口补票：锚点之间的"拼音不同、长度相同"区域
+    const anchors = [[-1, -1], ...pairs, [baseChars.length, chars.length]];
+    for (let n = 0; n < anchors.length - 1; n += 1) {
+      const [i1, j1] = anchors[n]; const [i2, j2] = anchors[n + 1];
+      const gi = i2 - i1 - 1; const gj = j2 - j1 - 1;
+      if (gi <= 0 || gi !== gj) continue;
+      for (let d = 1; d <= gi; d += 1) {
+        const i = i1 + d; const j = j1 + d;
+        const oc = chars[j]; const ac = baseChars[i];
+        if (!oc || oc === ac) continue;
+        add(i, oc, u.conf);
+      }
+    }
+  }
+
+  const chosen = new Map();
+  for (const [pos, arr] of votes) {
+    const tally = new Map();
+    for (const v of arr) tally.set(v.ch, (tally.get(v.ch) ?? 0) + 1);
+    const [ch, count] = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (count >= 2) chosen.set(pos, { ch, conf: Math.max(...arr.filter((v) => v.ch === ch).map((v) => v.conf)) });
+  }
+
+  const next = [...baseChars];
+  let rs = null; let prev = null;
+  const applyRun = () => {
+    if (rs === null) return;
+    const len = prev - rs + 1;
+    if (len >= 2) {
+      for (let q = rs; q <= prev; q += 1) next[q] = chosen.get(q).ch;
+    } else if ((chosen.get(rs).conf ?? 0) >= 0.85 && rs >= 0 && rs + 1 <= baseChars.length) {
+      next[rs] = chosen.get(rs).ch;
+    }
+    rs = null;
+  };
+  for (const q of [...chosen.keys()].sort((a, b) => a - b)) {
+    if (prev !== null && q === prev + 1) { prev = q; continue; }
+    applyRun(); rs = q; prev = q;
+  }
+  applyRun();
+
+  const diffs = [];
+  for (let i = 0; i < baseChars.length; i += 1) {
+    if (baseChars[i] !== next[i]) diffs.push({ i, was: baseChars[i], now: next[i], py: basePy[i] });
+  }
+  return { next, diffs };
+}
+
 function grab(ffmpegPath, input, at, out, vf) {
   const args = ['-hide_banner', '-v', 'error', '-y', '-ss', String(Math.max(0, at)), '-i', input, '-frames:v', '1'];
   if (vf) args.push('-vf', vf);
@@ -230,47 +302,15 @@ export async function alignTranscript({
       }
       if (!usable.length) continue;
 
-      const votes = new Map();
-      for (const u of usable) {
-        for (const [i, j] of lcs(asrPy[k], u.py)) {
-          const oc = [...u.text][j]; const ac = base[i];
-          if (!oc || oc === ac) continue;
-          if (!votes.has(i)) votes.set(i, []);
-          votes.get(i).push({ ch: oc, conf: u.conf });
-        }
-      }
-      const chosen = new Map();
-      for (const [pos, arr] of votes) {
-        const tally = new Map();
-        for (const v of arr) tally.set(v.ch, (tally.get(v.ch) ?? 0) + 1);
-        const [ch, count] = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
-        if (count >= 2) chosen.set(pos, { ch, conf: Math.max(...arr.filter((v) => v.ch === ch).map((v) => v.conf)) });
-      }
-
-      const next = [...base];
-      let rs = null; let prev = null;
-      const applyRun = () => {
-        if (rs === null) return;
-        const len = prev - rs + 1;
-        if (len >= 2) {
-          for (let q = rs; q <= prev; q += 1) next[q] = chosen.get(q).ch;
-        } else if ((chosen.get(rs).conf ?? 0) >= 0.85 && rs > 0 && rs + 1 < base.length) {
-          next[rs] = chosen.get(rs).ch;
-        }
-        rs = null;
-      };
-      for (const q of [...chosen.keys()].sort((a, b) => a - b)) {
-        if (prev !== null && q === prev + 1) { prev = q; continue; }
-        applyRun(); rs = q; prev = q;
-      }
-      applyRun();
-
+      const { next, diffs } = reconcileLine({
+        baseChars: base,
+        basePy: asrPy[k],
+        ocr: usable.map((u) => ({ text: u.text, py: u.py, conf: u.conf })),
+      });
       const was = base.join('');
       const now = next.join('');
       if (now !== was) {
         correctedLines += 1;
-        const diffs = [];
-        for (let i = 0; i < base.length; i += 1) if (base[i] !== next[i]) diffs.push({ i, was: base[i], now: next[i], py: asrPy[k][i] });
         correctedChars += diffs.length;
         changes.push({ from: s.seg.from, was, now, conf: Math.round(Math.max(...usable.map((u) => u.conf)) * 1000) / 1000, diffs });
         // 回写：保留原句的分句标点，只替换汉字位置

@@ -207,6 +207,50 @@ try {
   fail(`invoke 回路抛错：${error.message}`);
 }
 
+/* ------------------------------------------------ OCR 逐字对账（纯函数，无外部依赖） */
+// 回归：ASR 与 OCR 拼音不同的字（判 pan / 探 tan）也必须被纠正；
+// 且 ASR 多字/少字时不能整体串位。
+try {
+  const { reconcileLine } = await import(pathToFileURL(join(pkgDir, 'src/vendor/storyboard/ocr-align.js')).href);
+  const py = (s) => s.split(' ');
+  const asr1 = '可为什么第三个系列要选审判敌人节呢';
+  const ocr1 = '可为什么第三个系列要选神探狄仁杰呢';
+  const r1 = reconcileLine({
+    baseChars: [...asr1],
+    basePy: py('ke wei shen me di san ge xi lie yao xuan shen pan di ren jie ne'),
+    ocr: [
+      { text: ocr1, py: py('ke wei shen me di san ge xi lie yao xuan shen tan di ren jie ne'), conf: 0.99 },
+      { text: ocr1, py: py('ke wei shen me di san ge xi lie yao xuan shen tan di ren jie ne'), conf: 0.97 },
+    ],
+  });
+  if (r1.next.join('') !== ocr1) {
+    fail(`OCR 对账：期望「${ocr1}」，实得「${r1.next.join('')}」（判/探 拼音不同时没纠正）`);
+  } else {
+    ok('OCR 对账：判→探 一类"拼音不同"的字也能纠正');
+  }
+
+  // 缺口长度不等（ASR 多一个字）→ 不投票、不串位
+  const asr2 = '神探这个敌人节';
+  const ocr2 = '神探狄仁杰';
+  const r2 = reconcileLine({
+    baseChars: [...asr2],
+    basePy: py('shen tan zhe ge di ren jie'),
+    ocr: [
+      { text: ocr2, py: py('shen tan di ren jie'), conf: 0.99 },
+      { text: ocr2, py: py('shen tan di ren jie'), conf: 0.98 },
+    ],
+  });
+  // 断言的是"不串位"：长度不变、原文里多出来的「这个」仍在原位，没有被别的字顶掉
+  const got2 = r2.next.join('');
+  if (got2.length !== asr2.length || !got2.startsWith('神探') || got2.slice(2, 4) !== '这个') {
+    fail(`OCR 对账：ASR 多字时串位了，期望「神探 + 这个 + 原位替换」，实得「${got2}」`);
+  } else {
+    ok(`OCR 对账：两侧字数不等时不串位（得到「${got2}」，多出的「这个」仍在原位）`);
+  }
+} catch (error) {
+  fail(`OCR 对账回归抛错：${error instanceof Error ? error.message : String(error)}`);
+}
+
 /* ------------------------------------------- integral:false 的逃生口（可选） */
 // 需要 ffmpeg + 一支本地视频：DSH_CHECK_VIDEO=<path> npm run check
 // 断言：关掉积分取帧后 sampleMarks 必须是 0，且所有帧的 via 只能是 cut / start，不许有 mark。
