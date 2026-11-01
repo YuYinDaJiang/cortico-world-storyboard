@@ -53,4 +53,4 @@ commit e124ae6), repackaged as a Coopanion (Cortico) World. The upstream LICENSE
 above are kept verbatim; the algorithmic layer lives under src/vendor/storyboard/ and
 src/vendor/storyboard-v2/, each with its own VENDOR.md describing exactly what changed.
 
-Modifications Copyright 2026 <TODO: GitHub handle of the maintainer>
+Modifications Copyright 2026 YuYinDaJiang

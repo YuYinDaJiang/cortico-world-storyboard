@@ -64,11 +64,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TODO/coopanion-video-storyboard.git"
+    "url": "git+https://github.com/YuYinDaJiang/coopanion-video-storyboard.git"
   },
-  "homepage": "https://github.com/TODO/coopanion-video-storyboard#readme",
+  "homepage": "https://github.com/YuYinDaJiang/coopanion-video-storyboard#readme",
   "bugs": {
-    "url": "https://github.com/TODO/coopanion-video-storyboard/issues"
+    "url": "https://github.com/YuYinDaJiang/coopanion-video-storyboard/issues"
   },
-  "author": "TODO <TODO@example.com>"
+  "author": "YuYinDaJiang"
 }
