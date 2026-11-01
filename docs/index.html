@@ -162,6 +162,42 @@ wheel 缓存 / 离线 pip），已存在的逐项跳过。<strong>OCR 需要 Pyt
 <p>判据是区间 <b>3.11 ≤ v ≤ 3.13</b>：onnxruntime 等编译包只有 cp311/cp312/cp313 的 win_amd64 wheel，
 3.14/3.15 装了也跑不起来。</p>
 
+<h2>7. token 消耗：钱花在哪</h2>
+<p>本地跑 ffmpeg / ASR / OCR <strong>不花 token</strong>——那些都是你机器上的 CPU。真正花钱的只有两样：
+<strong>交给模型的图</strong>（每张 800×800 的宫格 = <b>384 tokens</b>，是视觉输入硬上限）
+和<strong>在场的文字索引</strong>（时间码 + 台词）。所以一次 run 的账大致是：</p>
+<pre><code>花费 ≈ 分镜图张数 × 384（视觉）  +  文字索引字符数 ÷ 2~3（中文粗略折算）</code></pre>
+<p>同一支视频、同一个 60s 窗口（standard 档、800×800 画布），把两个开关各拨一次：</p>
+<table>
+  <tr><th>规格</th><th>张数</th><th>视觉 tokens</th><th>备注</th></tr>
+  <tr><td><code>integral:true</code>（默认）</td><td>4</td><td><b>1,536</b></td><td>69 帧里 9 个来自伪切点</td></tr>
+  <tr><td><code>integral:false</code></td><td>2</td><td><b>768</b></td><td>58 帧全是真切点，图少一半</td></tr>
+  <tr><td><code>strategy:"full"</code></td><td>15</td><td>5,760</td><td>每格放大，最贵</td></tr>
+  <tr><td><code>strategy:"skim"</code>（速览）</td><td>1</td><td>384</td><td>全 1/8 档，切点按 0.35s 合并</td></tr>
+  <tr><td><code>strategy:"brief"</code>（一图）</td><td>1</td><td>384</td><td>整段压进一张</td></tr>
+  <tr><td><code>maxFrames: 24</code></td><td>3</td><td>1,152</td><td>封顶帧数</td></tr>
+  <tr><td><code>maxFrames: 12</code></td><td>1</td><td>384</td><td>封顶 + 并格</td></tr>
+</table>
+<p>文字索引这一半基本是“常数”：同一支片子，<code>detail</code> 三档实测长度</p>
+<table>
+  <tr><th>窗口</th><th>detail=low</th><th>detail=med</th><th>detail=high</th></tr>
+  <tr><td>60s（本页那支）</td><td>8,902 字符</td><td>8,902 字符</td><td>8,902 字符</td></tr>
+  <tr><td>300s</td><td>16,731 字符</td><td>16,731 字符</td><td>16,731 字符</td></tr>
+  <tr><td>长台词字幕（合成演示）</td><td>1,675 字符</td><td>1,692 字符</td><td>1,692 字符</td></tr>
+</table>
+<p>为什么三档一样：<code>detail</code> 的预算是<strong>按每格</strong>给的（low 60 / med 120 / high 400 字符），
+而这支片子的每格台词都短于 60 字，从来没触顶。只有当某一格里有整段朗读（或你塞了长台词 SRT）时
+三档才会分开——上表第三行就是那种情况，差距立刻出现。</p>
+<p>省钱的四个旋钮，各自都有代价：</p>
+<table>
+  <tr><th>做法</th><th>省多少</th><th>代价</th></tr>
+  <tr><td><code>strategy</code> 往 <code>skim</code> / <code>brief</code> 走</td><td>4 张 → 1 张（1,536 → 384）</td><td>全部 1/8 档，细节丢；快切被合并成少数几格</td></tr>
+  <tr><td><code>tierMap</code> 把相邻的快切格压到小档</td><td>张数不变但每格更小，模型更难读字</td><td>字变小 / 小字看不清，等于丢内容</td></tr>
+  <tr><td><code>maxFrames</code> 封顶</td><td>24 帧 → 3 张（1,152）；12 帧 → 1 张（384）</td><td>超出的短镜头直接被并掉，长片尾段可能只剩一格</td></tr>
+  <tr><td><code>detail:"low"</code></td><td>每格台词压到 60 字</td><td>不能引用原话，只能判断“这段在讲什么”</td></tr>
+</table>
+<p>反过来说，<strong>最省的一步不是这些旋钮，是别请求你不需要的时间段</b>：只取 30 秒比你整片跑完再压档便宜得多。</p>
+
 <footer>
   <p>这是 <a href="https://github.com/SAOS-3624/dsh-video-storyboard">SAOS-3624/dsh-video-storyboard</a> 0.6.0
   （提交 <code>e124ae6</code>）的 fork，按其 <b>Apache-2.0</b> 许可分发：上游 <code>LICENSE</code> 与
