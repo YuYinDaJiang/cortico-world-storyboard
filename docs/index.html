@@ -125,16 +125,22 @@ wheel 缓存 / 离线 pip），已存在的逐项跳过。<strong>OCR 需要 Pyt
 
 <h2>4. 硬字幕 OCR 纠正</h2>
 <p>同一段 0–60s、<code>detail: "high"</code>：<code>ocr: false</code> 13.3 s；
-<code>ocr: true</code> 31.4 s，结果是 <code class="good">ocr: corrected 5 lines / 14 chars (engine=rapidocr, conf≥0.85)</code>。</p>
+<code>ocr: true</code> 31.4 s，结果是 <code>ocr: corrected 5 lines / 14 chars (engine=rapidocr, conf≥0.85)</code>。
+<strong>但 5 处里只有 3 处是对的</strong>，另外 2 处是错的——照实列出来：</p>
 <table>
-  <tr><th>ASR 原文</th><th>OCR 纠正后</th></tr>
-  <tr><td class="bad">可为什么第三个系列要选审判敌人节呢</td><td>可为什么第三个系列要选神判狄仁杰呢</td></tr>
-  <tr><td class="bad">但审判敌人节就是能做的成功</td><td>但神判狄仁杰就是能做的成功</td></tr>
-  <tr><td class="bad">这部剧给大家展现了历史改变剧的上限</td><td>这部剧给大家展现了历史改编剧的上限</td></tr>
-  <tr><td class="bad">能知道敌人节这个名字</td><td>能知道狄仁杰这个名字</td></tr>
-  <tr><td class="bad">看着棒学着棒学好记住</td><td>看折棒学折棒学好记住 <span class="warn">← 这一处纠错了，OCR 也会认错字</span></td></tr>
+  <tr><th>ASR 原文</th><th>OCR 纠正后</th><th>判定</th></tr>
+  <tr><td class="bad">这部剧给大家展现了历史改变剧的上限</td><td>这部剧给大家展现了历史改编剧的上限</td><td class="good">对</td></tr>
+  <tr><td class="bad">能知道敌人节这个名字</td><td>能知道狄仁杰这个名字</td><td class="good">对</td></tr>
+  <tr><td class="bad">很大程度上就要归功于审叹敌人节这部电视</td><td>很大程度上就要归功于狄仁杰这部电视</td><td class="good">部分对（少了「神探」）</td></tr>
+  <tr><td class="bad">看着棒学着棒学好记住</td><td>看折棒学折棒学好记住</td><td class="warn">错：把对的改坏了</td></tr>
+  <tr><td class="bad">但审判敌人节就是能做的成功</td><td>但神判狄仁杰就是能做的成功</td><td class="warn">错：画面上是「神<strong>探</strong>」，纠正输出成了「神<strong>判</strong>」</td></tr>
 </table>
-<p>OCR 不是全对：它按“同音 + 高置信度 + 至少两帧一致”才改，改得少但基本不改坏；上表最后一行就是反例，留着没藏。</p>
+<p><strong>已确认的一处 bug</strong>：最后一行不是模型读错。把同一帧（18s）的硬字幕条单独拿去识别，原文是
+<code>可为什么第三个系列要选神探狄仁杰呢</code>，<b>conf 1.000</b>；同一块裁切放大 2 倍再读也是
+<code>神探狄仁杰</code>、conf 0.998。也就是说像素确实是「探」，是<em>我们自己的对齐/拼字环节</em>把它变成了「判」，
+目前正在查（不在这一版里假装它是对的）。</p>
+<p>OCR 的机制是「同音 + 置信度 ≥0.75 + 至少两帧一致」才改，改得少，但像上面两行这样改错的代价比不改还高——
+所以它默认是<em>建议</em>而不是事实，引用前请以画面为准。</p>
 
 <h2>5. 静态画面提示（不改行为，只提示）</h2>
 <p>画面几乎不动时，清单里会多出一行，建议重跑参数：</p>
