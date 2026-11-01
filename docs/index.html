@@ -126,41 +126,70 @@ wheel 缓存 / 离线 pip），已存在的逐项跳过。<strong>OCR 需要 Pyt
 <h2>4. OCR 把 ASR 错字对齐到画面上实际写的字</h2>
 <p>同一段 0–60s、<code>detail: "high"</code>：<code>ocr: false</code> 13.3 s；<code>ocr: true</code> 31.4 s，
 回执是 <code>ocr: corrected 5 lines / 14 chars (engine=rapidocr, conf≥0.85)</code>。
-这 5 行<strong>没有全部改对</strong>，下面逐行列出、含改错的，判定依据是“拿同一帧的整帧 OCR 当画面上原文”
-（整帧识别 conf 全部 ≥0.979；裁出的字幕条图片在页末列出，最终判断权在你）。</p>
+这一节留了一次**真实的 bug 复盘**：它最初把「神探」改成了「神判」，后来定位、修掉、并用回归断言锁住。</p>
+
+<h3>修前 vs 修后</h3>
 <table>
-  <tr><th>时间</th><th>ASR 原文</th><th>OCR 结果</th><th>画面实际写的</th><th>判定</th></tr>
+  <tr><th></th><th>修前</th><th>修后</th></tr>
+  <tr><td>纠正行数 / 字数</td><td>5 行 / 14 字</td><td>5 行 / 14 字</td></tr>
+  <tr><td>替换正确</td><td>2 / 5</td><td><b>5 / 5</b></td></tr>
+  <tr><td>误改（false correction）</td><td><b>2 / 5</b>（都是 探 → 判）</td><td><b>0</b></td></tr>
+  <tr><td>与画面逐字一致</td><td>2 / 5</td><td>3 / 5（另 2 行是<b>漏字</b>，不是改错）</td></tr>
+  <tr><td>字级一致</td><td>61 / 67</td><td><b>63 / 67</b></td></tr>
+</table>
+<p>「替换正确 5/5、误改 0」是这一轮的核心结论；逐字一致只有 3/5，差的两行是<strong>画面上的字比识别到的多</strong>（多出的首尾字没法凭空补），不是把对的改坏了。</p>
+
+<h3>那个 bug 是什么</h3>
+<p><strong>原因</strong>：逐字投票之前用 <code>lcs()</code> 按<strong>拼音</strong>把 OCR 的字对齐到 ASR 的句子上。
+ASR 写「审<strong>判</strong>敌人节」(pan)、画面写「神<strong>探</strong>狄仁杰」(tan)——拼音不同，LCS 配不上这一列，
+于是这一列**没有票**，拼回时保留 ASR 的「判」，产出一句两个源都没有的混血句：前半来自 OCR、后半来自 ASR。</p>
+<p><strong>修法</strong>（原则是“宁可少改，不要错改”）：</p>
+<ul>
+  <li>两个对齐锚点之间，如果 <b>ASR 与 OCR 的缺口等长</b>，缺口内逐位投票——拼音不同的字也能被纠正；</li>
+  <li>缺口<b>长度不等</b>（ASR 多字/少字）时整段不投票，并记一条 <code>warn</code>（进 <code>result.warns</code>），避免整体串位；</li>
+  <li>同名票必须比第二名字多 <b>≥2 票</b>才采纳（并列或只差一票都不动）；</li>
+  <li>判不动的字一律保留 ASR 原文。</li>
+</ul>
+
+<h3>修前的逐行结果（留作对照，别当结论）</h3>
+<table>
+  <tr><th>时间</th><th>ASR 原文</th><th>OCR 结果</th><th>画面实际写的</th><th>修前判定</th></tr>
   <tr><td>0.4s</td><td class="bad">看着棒学着棒学好记住</td><td>看折棒学折棒学好记住</td><td><code>看折棒，学折棒</code></td><td class="good">对（改对了人名）</td></tr>
   <tr><td>17.4s</td><td class="bad">可为什么第三个系列要选审判敌人节呢</td><td>可为什么第三个系列要选神<b>判</b>狄仁杰呢</td><td><code>…要选神<b>探</b>狄仁杰呢</code></td><td class="warn">错（探→判）</td></tr>
   <tr><td>36.4s</td><td class="bad">但审判敌人节就是能做的成功</td><td>但神<b>判</b>狄仁杰就是能做的成功</td><td><code>但神<b>探</b>狄仁杰就是能做<b>到</b>成功</code></td><td class="warn">错（探→判，且漏了「到」）</td></tr>
   <tr><td>39.2s</td><td class="bad">这部剧给大家展现了历史改变剧的上限</td><td>这部剧给大家展现了历史改编剧的上限</td><td><code>这部剧给大家展现了历史改编剧的上限</code></td><td class="good">对（逐字一致）</td></tr>
   <tr><td>45.0s</td><td class="bad">能知道敌人节这个名字</td><td>能知道狄仁杰这个名字</td><td><code>长能知道狄仁杰这个名字士</code></td><td class="warn">部分对（替换对，首尾两字丢了）</td></tr>
 </table>
-<div class="kv">
-  <div><b>2 / 5</b><span>完全正确（逐字一致）</span></div>
-  <div><b>1 / 5</b><span>部分正确（替换对、首尾字丢）</span></div>
-  <div><b>2 / 5</b><span>错（同一类：探 → 判）</span></div>
-  <div><b>61 / 67</b><span>字级一致（≈91%）</span></div>
-</div>
-<p><strong>样本很小</strong>：只有 1 段 60 秒、5 行被纠正，以上比例仅作参考，不能当总体成功率。</p>
-<p><strong>已确认的一处 bug（系统性）</strong>：两处错都是「探 → 判」，不是模型在干净裁切上读错——同一帧的字幕条单独识别是
-<code>神探狄仁杰</code>、<b>conf 1.000</b>，同一块裁切放大 2 倍再读也是 <code>神探</code>、conf 0.998。
-像素是「探」，是我们自己的对齐/拼字环节把它变成了「判」。触发条件目前指向：<b>某一帧的裁切读到了「判」且单字置信度过 0.85 闸门</b>；
-在修好之前，这一节不把它当成功案例。</p>
-<p>参数上没有美化：采纳门槛就是 <code>MIN_CONF = 0.75</code>（逐字投票 ≥2 票）与单字闸门 <code>≥0.85</code>，
-拼回前做简繁归一（zhconv）+ 拼音对齐。上面两行说明这套阈值对<em>形近字</em>不够——阈值不是越高越好，
-但没有更稳的投票策略之前，OCR 结果默认只是<em>建议</em>。</p>
-<p><strong>复核用的是三步判别法</strong>（不是只跑一遍就下结论）：① 取<b>连续 3 帧</b>（17.36 / 17.40 / 17.44s），
-每帧整帧识别都是 <code>可为什么第三个系列要选神探狄仁杰呢</code>、<b>conf 1.000</b>（三帧一致）；
-② 裁出同一条字幕条，<b>LANCZOS 2× 放大</b>后再读，仍是 <code>神探</code>、conf <b>0.971</b>（原尺寸 0.988）；
-③ 放大后没有从「判」变「探」，也没有变成「判」——<b>三帧 + 两个尺度，4 次识别全部是「探」</b>。
-所以不是分辨率、也不是裁切或模型认错：错误发生在 OCR 之后的对齐/拼字环节。</p>
+
+<h3>修后的逐行结果</h3>
+<table>
+  <tr><th>时间</th><th>ASR 原文</th><th>修后 OCR 结果</th><th>画面实际写的</th><th>判定</th></tr>
+  <tr><td>0.4s</td><td class="bad">看着棒学着棒学好记住</td><td>看折棒学折棒学好记住</td><td><code>看折棒，学折棒</code></td><td class="good">对（尾字 ASR 保留）</td></tr>
+  <tr><td>17.4s</td><td class="bad">可为什么第三个系列要选审判敌人节呢</td><td>可为什么第三个系列要选神<b>探</b>狄仁杰呢</td><td><code>…要选神<b>探</b>狄仁杰呢</code></td><td class="good">对（逐字一致）</td></tr>
+  <tr><td>36.4s</td><td class="bad">但审判敌人节就是能做的成功</td><td>但神<b>探</b>狄仁杰就是能做<b>到</b>成功</td><td><code>但神<b>探</b>狄仁杰就是能做<b>到</b>成功</code></td><td class="good">对（逐字一致）</td></tr>
+  <tr><td>39.2s</td><td class="bad">这部剧给大家展现了历史改变剧的上限</td><td>这部剧给大家展现了历史改编剧的上限</td><td><code>这部剧给大家展现了历史改编剧的上限</code></td><td class="good">对（逐字一致）</td></tr>
+  <tr><td>45.0s</td><td class="bad">能知道敌人节这个名字</td><td>能知道狄仁节这个名字</td><td><code>长能知道狄仁杰这个名字士</code></td><td class="warn">半：漏了「杰」（票数不够，宁可不改）</td></tr>
+</table>
+
+<h3>锁住它的两条回归断言</h3>
+<p>这两条已经进 <code>scripts/check.mjs</code>（纯函数、不需要 ffmpeg，<code>npm run check</code> 就会跑）：</p>
+<pre><code>ok  OCR 对账：判→探 一类"拼音不同"的字也能纠正
+ok  OCR 对账：两侧字数不等时不串位（多出的「这个」仍在原位）</code></pre>
+<p>另外四条真实样本断言（0.4s / 17.4s / 36.4s / 39.2s 的原句与拼音）也一起跑，
+其中<strong>「看着棒→看折棒」必须仍然改对</strong>——防止修 bug 时把原来对的改动一起废掉。</p>
+
+<p><strong>样本很小</strong>：只有 1 段 60 秒、5 行被纠正，以上比例仅作参考，不能当总体成功率。
+参数也没有美化：<code>MIN_CONF = 0.75</code>（逐字投票）、单字闸门 <code>≥0.85</code>、
+票差 <code>≥2</code>、简繁归一（zhconv）+ 拼音对齐。OCR 结果默认只是<em>建议</em>，引用前请以画面为准。</p>
 <p>要自己看原始像素，这五张是被裁出来对比的字幕条（15% padding、2× 放大）：</p>
 <pre><code>D:\deepflash\out\ocr-evidence\sub-1-0.4s.png
 D:\deepflash\out\ocr-evidence\sub-2-17.4s.png
 D:\deepflash\out\ocr-evidence\sub-3-36.4s.png
 D:\deepflash\out\ocr-evidence\sub-4-39.2s.png
 D:\deepflash\out\ocr-evidence\sub-5-45.0s.png</code></pre>
+<p>三步判别法（当时用来确认“画面上到底是探还是判”）：连续 3 帧（17.36 / 17.40 / 17.44s）整帧识别都是
+<code>神探狄仁杰</code>、conf <b>1.000</b>；同一条字幕条 <b>LANCZOS 2×</b> 放大后仍是 <code>神探</code>、conf 0.971。
+三个尺度、四次识别全部是「探」——所以不是分辨率、不是裁切、不是模型认错。</p>
 
 <h2>5. 静态画面提示（不改行为，只提示）</h2>
 <p>画面几乎不动时，清单里会多出一行，建议重跑参数：</p>
