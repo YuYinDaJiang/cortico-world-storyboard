@@ -11,7 +11,7 @@ Coopanion / Cortico 的 World：把视频变成可引用的分镜宫格图，附
 零运行时依赖（`dependencies` 为空）。外部程序 ffmpeg / ffprobe / yt-dlp / whisper.cpp / Python 都由使用者
 显式安装或指定，包本身不下载任何东西。
 
-> 带图的展示页（安装步骤 + 六组真跑对比 + token 消耗与省钱旋钮）：[`docs/index.html`](docs/index.html)——纯静态，浏览器直接打开。
+> 带图的展示页（安装步骤 + 六组真跑对比 + token 消耗与省钱旋钮）：https://yuyindajiang.github.io/coopanion-video-storyboard/ ——纯静态，浏览器直接打开。
 
 ## 它能干什么
 
@@ -29,6 +29,22 @@ Coopanion / Cortico 的 World：把视频变成可引用的分镜宫格图，附
 | `video_zoom` | 把某一格那几秒放大重读 | 字幕、人名、小字看不清时 |
 
 一个真数：一支 24 分钟影视解说，**37 张图、14,208 token** 就能把全片过一遍；同一支片子换成上游逐帧截取，是 94 张图、36,096 token。
+
+## 长什么样
+
+**积分伪切点：`integral` 开 vs 关**（同一支片子、同一套参数，只切这一项）
+
+| `integral: true` — 长镜头内部多出重复格 | `integral: false` — 一格一句话 |
+|---|---|
+| ![](docs/img/integral-true.png) | ![](docs/img/integral-false.png) |
+
+**切点检测：上游 vs 自带**（`detect` 默认 upstream，`detect:"own"` 走本仓库的检测器）
+
+| 上游 `upstream` | 自带 `detect: "own"` |
+|---|---|
+| ![](docs/img/detect-upstream.png) | ![](docs/img/detect-own.png) |
+
+更多对比（六组真跑、token 消耗、省钱旋钮）在展示页。
 
 ## 与上游的差异
 
