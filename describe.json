@@ -199,6 +199,15 @@
             ],
             "description": "Which algorithm runs. v1 (default) is the current main line: cut-driven tiers, then row packing. v2 is the older 0.3.0 \"coverage\" engine kept side by side for comparison: candidate frames scored for novelty, then coverage selection. Same input, different cells and different token cost."
           },
+          "subtitles": {
+            "type": "string",
+            "enum": [
+              "off",
+              "ocr",
+              "ocr-dense"
+            ],
+            "description": "Default off. \"ocr\" = ignore ASR entirely and read the burned-in subtitles frame by frame (step=1s, bottom band, deduped). Use it for foreign-language audio with Chinese hard subs, where ASR cannot help. Slow (~0.25s per frame), so scope it with from/to."
+          },
           "detect": {
             "type": "string",
             "enum": [
