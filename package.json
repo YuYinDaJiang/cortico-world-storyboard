@@ -1,6 +1,6 @@
 {
   "name": "coopanion-video-storyboard",
-  "version": "0.8.8",
+  "version": "0.8.9",
   "type": "module",
   "description": "Coopanion (Cortico) World: turn a video into citable storyboard sheets with timecodes, local whisper.cpp transcription, on-screen subtitle OCR correction, and a pluggable cut detector.",
   "license": "Apache-2.0",

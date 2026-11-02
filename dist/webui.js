@@ -421,6 +421,16 @@ const panel = {
     };
 
     await refresh();
+
+    // 打开面板就自动体检一次：不能只读缓存，否则「上次是就绪、这次实际跑不动」会看不到。
+    // 先画一帧缓存状态（避免空白），随后并行刷新媒体工具 + OCR，最后再拉一次完整 state。
+    void (async () => {
+      try {
+        await call('check');
+        await call('ocrCheck');
+        await refresh();
+      } catch { /* 打开时体检失败不该让面板报错 */ }
+    })();
   },
 };
 
