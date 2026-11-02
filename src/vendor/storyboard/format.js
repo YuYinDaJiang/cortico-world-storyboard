@@ -705,9 +705,9 @@ export function formatManifest(result, {
     if (result.ocrExtract.status !== 'ok') {
       const ex = result.ocrExtract;
       const seen = ex.stats?.frames ?? 0;
-      lines.push(`subtitles: OCR extraction FAILED (status=${ex.status}${ex.reason ? `, reason=${ex.reason}` : ''}`
-        + `${seen ? `, saw ${seen} frames` : ''}) — transcript fell back to ${result.transcript?.source ?? 'none'}, `
-        + 'so cell text may come from ASR rather than the burned-in subtitles');
+      lines.push(`subtitles: OCR 没跑成，已退回 ${result.transcript?.source ?? 'none'} —— `
+        + `status=${ex.status}${ex.reason ? `，reason=${ex.reason}` : ''}${seen ? `，扫到 ${seen} 帧` : ''}；`
+        + '格子里的文本可能来自 ASR，不是画面字幕');
     }
   }
   if (result.ocrExtract && result.ocrExtract.status === 'ok') {
@@ -715,6 +715,10 @@ export function formatManifest(result, {
     const st = ex.mode === 'frames' ? 'reused storyboard frames' : `step≈${ex.step ?? 1}s`;
     lines.push(`subtitles: OCR read ${ex.frames ?? '?'} frames (${st}) → ${ex.read ?? '?'} lines OCR'd → `
       + `${ex.kept ?? '?'} sentences merged (known limit: lines shorter than the frame interval can be missed)`);
+    if ((ex.kept ?? 0) === 0) {
+      lines.push('hint: 这段一行字幕都没抽到——要么确实没有硬字幕，要么字幕不在画面底部那条带里'
+        + '（可以先用 video_zoom 看一格画面确认）');
+    }
     if (ex.sparse) {
       lines.push('hint: 该段需要更密采样——抽到的帧里不到一半读到字幕，长镜头里滚过两句的情况会漏');
     }
