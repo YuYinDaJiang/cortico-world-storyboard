@@ -362,22 +362,8 @@ export async function runStoryboard(opts) {
   // ---- 台词：显式文件 > 字幕轨 > ASR；三者都没有就静默跳过（绝不让分镜失败）
   const transcriptResult = await transcriptP;
   let { transcriptInfo } = transcriptResult;
-  // [World 新增] 纯 OCR 抽字幕：不依赖 ASR，直接把画面字幕当台词
+  // [World 新增] 纯 OCR 抽字幕：复用分镜已经解出来的帧，不再另开一路扫描（见 segs 之后）
   let ocrExtract = null;
-  if (subtitles === 'ocr') {
-    ocrExtract = await extractSubtitles({
-      input, ffmpegPath, from: winStart,
-      to: winStart + (Number.isFinite(winDur) ? winDur : 60), step: 1,
-    }).catch((e) => ({ status: 'failed', reason: String(e?.message ?? e) }));
-    if (ocrExtract?.lines?.length) {
-      transcriptInfo = {
-        source: 'ocr-subs',
-        segments: ocrExtract.lines.map((l) => ({ from: l.from, to: l.to, text: l.text })),
-        chars: ocrExtract.lines.reduce((n, l) => n + [...l.text].length, 0),
-        ocrExtract: ocrExtract.stats,
-      };
-    }
-  }
   const { textInSilence } = transcriptResult;
   let ocrReport = null;
   if (ocr && (transcriptInfo?.source === 'asr' || transcriptInfo?.source === 'file') && (transcriptInfo.segments?.length ?? 0) > 0) {
@@ -700,6 +686,21 @@ export async function runStoryboard(opts) {
   if (!Number.isFinite(capFrames)) built = fillGaps(built);
 
   const { segs, raw: rawTiers, tiers, plan: packed } = built;
+  // 纯 OCR 抽字幕：只用本次分镜实际取到的那几帧（含积分取样帧），不额外密集扫描
+  if (subtitles === 'ocr' && segs.length) {
+    ocrExtract = await extractSubtitles({
+      input, ffmpegPath, times: segs.map((s) => +s.t.toFixed(2)),
+    }).catch((e) => ({ status: 'failed', reason: String(e?.message ?? e) }));
+    if (ocrExtract?.lines?.length) {
+      transcriptInfo = {
+        source: 'ocr-subs',
+        segments: ocrExtract.lines.map((l) => ({ from: l.from, to: l.to, text: l.text })),
+        chars: ocrExtract.lines.reduce((n, l) => n + [...l.text].length, 0),
+        ocrExtract: ocrExtract.stats,
+      };
+    }
+  }
+
 
   // 每格对到帧：seq 就是帧下标（排布不改顺序）
   const cellFrames = segs.map((s, i) => ({ ...s, tier: tiers[i], rawTier: rawTiers[i], seq: i }));
@@ -1016,6 +1017,7 @@ export async function runStoryboard(opts) {
   const result = {
     timing,
     ...(ocrReport ? { ocr: ocrReport } : {}),
+    ...(ocrExtract ? { ocrExtract } : {}),
     info,
     provenance,
     window: { from: winStart, to: winStart + winDur, duration: winDur },

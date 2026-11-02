@@ -213,7 +213,7 @@ function grab(ffmpegPath, input, at, out, vf) {
  * @returns {Promise<{status:string, reason?:string, lines?:Array<{from:number,to:number,text:string,conf:number}>, stats?:object}>}
  */
 export async function extractSubtitles({
-  input, ffmpegPath = 'ffmpeg', from = 0, to = Infinity, step = 1, maxFrames = 2000,
+  input, ffmpegPath = 'ffmpeg', times = null, from = 0, to = Infinity, step = 1, maxFrames = 2000,
 } = {}) {
   const caps = await ocrCapabilities();
   if (!caps.bridge) return { status: 'skipped', reason: 'bridge-missing' };
@@ -224,11 +224,26 @@ export async function extractSubtitles({
   const dir = mkdtempSync(join(storyboardTempRoot(), 'ocr-extract-'));
   try {
     const frames = [];
-    for (let t = from; t < end && frames.length < maxFrames; t += stride) {
-      const file = join(dir, `f${frames.length}.jpg`);
-      // eslint-disable-next-line no-await-in-loop
-      await grab(ffmpegPath, input, t, file, null);
-      frames.push({ t, file });
+    if (Array.isArray(times) && times.length) {
+      // 复用分镜已经取到的那几帧（含积分取样帧）：一帧一个时间点，不额外密集扫描
+      for (const t of times.slice(0, maxFrames)) {
+        if (!Number.isFinite(t) || t < 0) continue;
+        const file = join(dir, `f${frames.length}.jpg`);
+        // eslint-disable-next-line no-await-in-loop
+        await grab(ffmpegPath, input, t, file, null);
+        frames.push({ t, file, stride: null });
+      }
+      for (let i = 0; i < frames.length; i += 1) {
+        const nextT = frames[i + 1]?.t ?? frames[i].t + stride;
+        frames[i].stride = Math.max(0.2, +(nextT - frames[i].t).toFixed(2));
+      }
+    } else {
+      for (let t = from; t < end && frames.length < maxFrames; t += stride) {
+        const file = join(dir, `f${frames.length}.jpg`);
+        // eslint-disable-next-line no-await-in-loop
+        await grab(ffmpegPath, input, t, file, null);
+        frames.push({ t, file, stride });
+      }
     }
     if (!frames.length) return { status: 'skipped', reason: 'no-frames' };
 
@@ -243,19 +258,20 @@ export async function extractSubtitles({
         .filter((ln) => { const t = charsOf(ln.text).join(''); return t.length >= 2 && t.length <= 60; })
         .sort((a, b) => b.conf - a.conf)[0];
       if (!cand) continue;
-      picked.push({ t: frames[i].t, text: charsOf(cand.text).join(''), conf: cand.conf });
+      picked.push({ t: frames[i].t, stride: frames[i].stride, text: charsOf(cand.text).join(''), conf: cand.conf });
     }
 
     const lines = [];
     for (const p of picked) {
       const last = lines[lines.length - 1];
-      if (last && last.text === p.text) { last.to = +(p.t + stride).toFixed(2); last.conf = Math.max(last.conf, p.conf); continue; }
-      lines.push({ from: +p.t.toFixed(2), to: +(p.t + stride).toFixed(2), text: p.text, conf: Math.round(p.conf * 1000) / 1000 });
+      const span = p.stride ?? stride;
+      if (last && last.text === p.text) { last.to = +(p.t + span).toFixed(2); last.conf = Math.max(last.conf, p.conf); continue; }
+      lines.push({ from: +p.t.toFixed(2), to: +(p.t + span).toFixed(2), text: p.text, conf: Math.round(p.conf * 1000) / 1000 });
     }
     return {
       status: lines.length ? 'ok' : 'empty',
       lines,
-      stats: { frames: frames.length, read: picked.length, kept: lines.length, dropped: frames.length - picked.length, step: stride },
+      stats: { mode: Array.isArray(times) && times.length ? 'frames' : 'scan', frames: frames.length, read: picked.length, kept: lines.length, dropped: frames.length - picked.length, step: stride, sparse: picked.length < frames.length * 0.5 },
     };
   } catch (error) {
     return { status: 'failed', reason: String(error?.message ?? error).slice(0, 200) };

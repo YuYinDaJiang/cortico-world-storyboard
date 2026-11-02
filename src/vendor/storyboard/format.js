@@ -699,6 +699,16 @@ export function formatManifest(result, {
         (result.transcript.suspect > 3 ? ', …' : ''));
     }
   }
+  // [World 新增] 纯 OCR 抽字幕的回执：读了几帧、合并成几句，以及"会漏句"这个已知限制
+  if (result.ocrExtract) {
+    const ex = result.ocrExtract.stats ?? {};
+    const st = ex.mode === 'frames' ? 'reused storyboard frames' : `step≈${ex.step ?? 1}s`;
+    lines.push(`subtitles: OCR read ${ex.frames ?? '?'} frames (${st}) → ${ex.read ?? '?'} lines OCR'd → `
+      + `${ex.kept ?? '?'} sentences merged (known limit: lines shorter than the frame interval can be missed)`);
+    if (ex.sparse) {
+      lines.push('hint: 该段需要更密采样——抽到的帧里不到一半读到字幕，长镜头里滚过两句的情况会漏');
+    }
+  }
   if (result.ocr) {
     // [World 改动] 新版一行汇总（自适应行框 + 多帧投票）：用户/模型一眼看"改了几条、几个字"
     if (result.ocr.summary) lines.push(result.ocr.summary);
