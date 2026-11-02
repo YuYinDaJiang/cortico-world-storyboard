@@ -701,6 +701,16 @@ export function formatManifest(result, {
   }
   // [World 新增] 纯 OCR 抽字幕的回执：读了几帧、合并成几句，以及"会漏句"这个已知限制
   if (result.ocrExtract) {
+    // 抽取失败要报真原因，别只打问号；同时说明这次台词回退到了 ASR（不是 ocr-subs）
+    if (result.ocrExtract.status !== 'ok') {
+      const ex = result.ocrExtract;
+      const seen = ex.stats?.frames ?? 0;
+      lines.push(`subtitles: OCR extraction FAILED (status=${ex.status}${ex.reason ? `, reason=${ex.reason}` : ''}`
+        + `${seen ? `, saw ${seen} frames` : ''}) — transcript fell back to ${result.transcript?.source ?? 'none'}, `
+        + 'so cell text may come from ASR rather than the burned-in subtitles');
+    }
+  }
+  if (result.ocrExtract && result.ocrExtract.status === 'ok') {
     const ex = result.ocrExtract.stats ?? {};
     const st = ex.mode === 'frames' ? 'reused storyboard frames' : `step≈${ex.step ?? 1}s`;
     lines.push(`subtitles: OCR read ${ex.frames ?? '?'} frames (${st}) → ${ex.read ?? '?'} lines OCR'd → `
@@ -708,6 +718,7 @@ export function formatManifest(result, {
     if (ex.sparse) {
       lines.push('hint: 该段需要更密采样——抽到的帧里不到一半读到字幕，长镜头里滚过两句的情况会漏');
     }
+    if (ex.capped) lines.push('hint: 抽取达到帧数上限被截断，剩下的时段没有 OCR（缩小 from/to 或加大 step 重跑）');
   }
   if (result.ocr) {
     // [World 改动] 新版一行汇总（自适应行框 + 多帧投票）：用户/模型一眼看"改了几条、几个字"

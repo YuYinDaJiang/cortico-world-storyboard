@@ -247,7 +247,17 @@ export async function extractSubtitles({
     }
     if (!frames.length) return { status: 'skipped', reason: 'no-frames' };
 
-    const det = await runBridge(caps.python, 'lines', frames.map((f) => f.file));
+    // 分批：一次把上千张图丢给 python 会撑爆内存/超时（长窗口就是这么静默失败的）
+    const BATCH = 40;
+    const det = { ok: true, items: [] };
+    for (let i = 0; i < frames.length; i += BATCH) {
+      const part = frames.slice(i, i + BATCH);
+      // eslint-disable-next-line no-await-in-loop
+      const r = await runBridge(caps.python, 'lines', part.map((f) => f.file));
+      if (!r.ok) { det.ok = false; det.error = r.error ?? 'lines-failed'; break; }
+      det.items.push(...(r.items ?? []));
+    }
+    if (!det.ok) return { status: 'failed', reason: String(det.error ?? 'lines-failed').slice(0, 200), stats: { frames: frames.length, framesSeen: frames.length } };
     if (!det.ok) return { status: 'failed', reason: 'lines-failed' };
 
     const picked = [];
@@ -287,10 +297,11 @@ export async function extractSubtitles({
       }
       lines.push({ ...cur });
     }
+    const capped = frames.length >= maxFrames;
     return {
       status: lines.length ? 'ok' : 'empty',
       lines,
-      stats: { multiline, merged, mode: Array.isArray(times) && times.length ? 'frames' : 'scan', frames: frames.length, read: picked.length, kept: lines.length, dropped: frames.length - picked.length, step: stride, sparse: picked.length < frames.length * 0.5 },
+      stats: { capped, multiline, merged, mode: Array.isArray(times) && times.length ? 'frames' : 'scan', frames: frames.length, read: picked.length, kept: lines.length, dropped: frames.length - picked.length, step: stride, sparse: picked.length < frames.length * 0.5 },
     };
   } catch (error) {
     return { status: 'failed', reason: String(error?.message ?? error).slice(0, 200) };
@@ -335,7 +346,17 @@ export async function alignTranscript({
       }
     }
 
-    const det = await runBridge(caps.python, 'lines', frames.map((f) => f.file));
+    // 分批：一次把上千张图丢给 python 会撑爆内存/超时（长窗口就是这么静默失败的）
+    const BATCH = 40;
+    const det = { ok: true, items: [] };
+    for (let i = 0; i < frames.length; i += BATCH) {
+      const part = frames.slice(i, i + BATCH);
+      // eslint-disable-next-line no-await-in-loop
+      const r = await runBridge(caps.python, 'lines', part.map((f) => f.file));
+      if (!r.ok) { det.ok = false; det.error = r.error ?? 'lines-failed'; break; }
+      det.items.push(...(r.items ?? []));
+    }
+    if (!det.ok) return { status: 'failed', reason: String(det.error ?? 'lines-failed').slice(0, 200), stats: { frames: frames.length, framesSeen: frames.length } };
     if (!det.ok) return { status: 'failed', reason: 'lines-failed', checked: 0, fixed: 0, chars: 0 };
 
     const asrRaw = samples.map((s) => charsOf(s.seg.text).join(''));
