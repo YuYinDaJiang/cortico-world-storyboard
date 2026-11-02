@@ -686,18 +686,24 @@ export async function runStoryboard(opts) {
   if (!Number.isFinite(capFrames)) built = fillGaps(built);
 
   const { segs, raw: rawTiers, tiers, plan: packed } = built;
-  // 纯 OCR 抽字幕：只用本次分镜实际取到的那几帧（含积分取样帧），不额外密集扫描
-  if (subtitles === 'ocr' && segs.length) {
-    ocrExtract = await extractSubtitles({
-      input, ffmpegPath, times: segs.map((s) => +s.t.toFixed(2)),
-    }).catch((e) => ({ status: 'failed', reason: String(e?.message ?? e) }));
-    if (ocrExtract?.lines?.length) {
-      transcriptInfo = {
-        source: 'ocr-subs',
-        segments: ocrExtract.lines.map((l) => ({ from: l.from, to: l.to, text: l.text })),
-        chars: ocrExtract.lines.reduce((n, l) => n + [...l.text].length, 0),
-        ocrExtract: ocrExtract.stats,
-      };
+  // 纯 OCR 抽字幕：只用本次分镜实际取到的那几帧（含积分取样帧），不额外密集扫描。
+  // 用 built.segs（属性访问）而不是解构出来的 segs：即使上层顺序被人改坏也不会 TDZ。
+  if (subtitles === 'ocr') {
+    try {
+      const frameTimes = (built?.segs ?? []).map((s) => +Number(s.t).toFixed(2)).filter(Number.isFinite);
+      if (frameTimes.length) {
+        ocrExtract = await extractSubtitles({ input, ffmpegPath, times: frameTimes });
+      }
+      if (ocrExtract?.lines?.length) {
+        transcriptInfo = {
+          source: 'ocr-subs',
+          segments: ocrExtract.lines.map((l) => ({ from: l.from, to: l.to, text: l.text })),
+          chars: ocrExtract.lines.reduce((n, l) => n + [...l.text].length, 0),
+          ocrExtract: ocrExtract.stats,
+        };
+      }
+    } catch (error) {
+      ocrExtract = { status: 'failed', reason: String(error?.message ?? error).slice(0, 200) };
     }
   }
 
@@ -826,6 +832,7 @@ export async function runStoryboard(opts) {
       sheets: [],
       cells: cellsMeta,
       textOnly: true,
+      ...(ocrExtract ? { ocrExtract } : {}),
       ...(sourceInfo ? { source: sourceInfo } : {}),
       ...(refinedBursts.length ? { refinedBursts } : {}),
       totalDuration: +segs.reduce((n, s) => n + (s.to - s.from), 0).toFixed(3),
