@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.11 — 2026-11-02
 
 - 修复：prefetch 下载没带 cookies，登录片会退化成匿名请求（对齐上游 PR #56）。
 
