@@ -111,6 +111,7 @@ export async function runStoryboard(opts) {
     hotwords,
     ocr = false,
   subtitles = 'off',
+  ocrStep = 1,
     asrKey,
     asrIdleMs = null,
     cache = true,
@@ -688,11 +689,22 @@ export async function runStoryboard(opts) {
   const { segs, raw: rawTiers, tiers, plan: packed } = built;
   // 纯 OCR 抽字幕：只用本次分镜实际取到的那几帧（含积分取样帧），不额外密集扫描。
   // 用 built.segs（属性访问）而不是解构出来的 segs：即使上层顺序被人改坏也不会 TDZ。
-  if (subtitles === 'ocr') {
+  if (subtitles === 'ocr' || subtitles === 'ocr-dense') {
     try {
-      const frameTimes = (built?.segs ?? []).map((s) => +Number(s.t).toFixed(2)).filter(Number.isFinite);
-      if (frameTimes.length) {
-        ocrExtract = await extractSubtitles({ input, ffmpegPath, times: frameTimes });
+      if (subtitles === 'ocr-dense') {
+        // 密集模式：按 ocrStep 秒独立扫描（整集出台词用；慢，但不会漏短句）
+        ocrExtract = await extractSubtitles({
+          input,
+          ffmpegPath,
+          from: winStart,
+          to: winStart + (Number.isFinite(winDur) ? winDur : 60),
+          step: Number.isFinite(Number(ocrStep)) ? Number(ocrStep) : 1,
+        });
+      } else {
+        const frameTimes = (built?.segs ?? []).map((s) => +Number(s.t).toFixed(2)).filter(Number.isFinite);
+        if (frameTimes.length) {
+          ocrExtract = await extractSubtitles({ input, ffmpegPath, times: frameTimes });
+        }
       }
       if (ocrExtract?.lines?.length) {
         transcriptInfo = {

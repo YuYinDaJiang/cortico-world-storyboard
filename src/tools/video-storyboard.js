@@ -71,7 +71,7 @@ export function videoStoryboardDescribe() {
   };
   parameters.properties.subtitles = {
     type: 'string',
-    enum: ['off', 'ocr'],
+    enum: ['off', 'ocr', 'ocr-dense'],
     description: 'Default off. "ocr" = ignore ASR entirely and read the burned-in subtitles frame by frame '
       + '(step=1s, bottom band, deduped). Use it for foreign-language audio with Chinese hard subs, '
       + 'where ASR cannot help. Slow (~0.25s per frame), so scope it with from/to.',
@@ -124,7 +124,8 @@ export async function runStoryboardTool(args, { dataDir, cfg }) {
   let options;
   try {
     options = boardOptions(args, { kind: 'board' });
-  if (args.subtitles === 'ocr') options.subtitles = 'ocr';
+  if (args.subtitles === 'ocr' || args.subtitles === 'ocr-dense') options.subtitles = args.subtitles;
+  if (Number.isFinite(Number(args.ocrStep))) options.ocrStep = Math.max(0.25, Math.min(5, Number(args.ocrStep)));
     if (cfg?.ffmpegPath) options.ffmpegPath = cfg.ffmpegPath;
     if (cfg?.ffprobePath) options.ffprobePath = cfg.ffprobePath;
     if (transcript?.file) options.transcriptFile = transcript.file;
