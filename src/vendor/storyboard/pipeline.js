@@ -48,6 +48,7 @@ import { findInjection } from './injection.js';
 import { addAudioStrip, addSheetHeader, clock, composePacked, encodePngBuffer } from './sheet.js';
 import { extractFrameWithFallback, extractFramesBatched, mapPool } from './frames.js';
 import { correctByOnScreenSubs } from './ocr-subs.js';
+import { extractSubtitles } from './ocr-align.js';
 import { resolveHwaccel } from './hwaccel.js';
 
 export const PICK_MODES = ['sharp', 'mid', 'thumb'];// 只有两种：时间码不烧进画面 —— 它占像素、压缩后先糊，而清单里已经有 0.01 秒精度的时间。
@@ -109,6 +110,7 @@ export async function runStoryboard(opts) {
     asrMaxChunk = 45,
     hotwords,
     ocr = false,
+  subtitles = 'off',
     asrKey,
     asrIdleMs = null,
     cache = true,
@@ -360,6 +362,22 @@ export async function runStoryboard(opts) {
   // ---- 台词：显式文件 > 字幕轨 > ASR；三者都没有就静默跳过（绝不让分镜失败）
   const transcriptResult = await transcriptP;
   let { transcriptInfo } = transcriptResult;
+  // [World 新增] 纯 OCR 抽字幕：不依赖 ASR，直接把画面字幕当台词
+  let ocrExtract = null;
+  if (subtitles === 'ocr') {
+    ocrExtract = await extractSubtitles({
+      input, ffmpegPath, from: winStart,
+      to: winStart + (Number.isFinite(winDur) ? winDur : 60), step: 1,
+    }).catch((e) => ({ status: 'failed', reason: String(e?.message ?? e) }));
+    if (ocrExtract?.lines?.length) {
+      transcriptInfo = {
+        source: 'ocr-subs',
+        segments: ocrExtract.lines.map((l) => ({ from: l.from, to: l.to, text: l.text })),
+        chars: ocrExtract.lines.reduce((n, l) => n + [...l.text].length, 0),
+        ocrExtract: ocrExtract.stats,
+      };
+    }
+  }
   const { textInSilence } = transcriptResult;
   let ocrReport = null;
   if (ocr && (transcriptInfo?.source === 'asr' || transcriptInfo?.source === 'file') && (transcriptInfo.segments?.length ?? 0) > 0) {

@@ -208,6 +208,61 @@ function grab(ffmpegPath, input, at, out, vf) {
  *                    summary?:string, changes?:Array, a2?:Array, segments?:Array}>}
  * 永远不抛：任何环境问题都返回一个带 status 的对象，由调用方写进清单。
  */
+/**
+ * 纯 OCR 抽字幕（不依赖 ASR）：按 step 秒抽帧 → 读底部字幕行 → 去重合并。
+ * @returns {Promise<{status:string, reason?:string, lines?:Array<{from:number,to:number,text:string,conf:number}>, stats?:object}>}
+ */
+export async function extractSubtitles({
+  input, ffmpegPath = 'ffmpeg', from = 0, to = Infinity, step = 1, maxFrames = 2000,
+} = {}) {
+  const caps = await ocrCapabilities();
+  if (!caps.bridge) return { status: 'skipped', reason: 'bridge-missing' };
+  if (!caps.python || !caps.rapidocr) return { status: 'skipped', reason: 'no-ocr-engine' };
+  const end = Number.isFinite(to) ? to : from + 60;
+  const stride = Math.max(0.25, Number(step) || 1);
+  mkdirSync(storyboardTempRoot(), { recursive: true });
+  const dir = mkdtempSync(join(storyboardTempRoot(), 'ocr-extract-'));
+  try {
+    const frames = [];
+    for (let t = from; t < end && frames.length < maxFrames; t += stride) {
+      const file = join(dir, `f${frames.length}.jpg`);
+      // eslint-disable-next-line no-await-in-loop
+      await grab(ffmpegPath, input, t, file, null);
+      frames.push({ t, file });
+    }
+    if (!frames.length) return { status: 'skipped', reason: 'no-frames' };
+
+    const det = await runBridge(caps.python, 'lines', frames.map((f) => f.file));
+    if (!det.ok) return { status: 'failed', reason: 'lines-failed' };
+
+    const picked = [];
+    for (const [i, it] of (det.items ?? []).entries()) {
+      const fh = it.size?.[1] ?? 720;
+      const cand = (it.lines ?? [])
+        .filter((ln) => (ln.y1 - ln.y0) > 0 && (ln.y1 - ln.y0) <= fh * 0.16 && (ln.y0 + ln.y1) / 2 >= fh * 0.55)
+        .filter((ln) => { const t = charsOf(ln.text).join(''); return t.length >= 2 && t.length <= 60; })
+        .sort((a, b) => b.conf - a.conf)[0];
+      if (!cand) continue;
+      picked.push({ t: frames[i].t, text: charsOf(cand.text).join(''), conf: cand.conf });
+    }
+
+    const lines = [];
+    for (const p of picked) {
+      const last = lines[lines.length - 1];
+      if (last && last.text === p.text) { last.to = +(p.t + stride).toFixed(2); last.conf = Math.max(last.conf, p.conf); continue; }
+      lines.push({ from: +p.t.toFixed(2), to: +(p.t + stride).toFixed(2), text: p.text, conf: Math.round(p.conf * 1000) / 1000 });
+    }
+    return {
+      status: lines.length ? 'ok' : 'empty',
+      lines,
+      stats: { frames: frames.length, read: picked.length, kept: lines.length, dropped: frames.length - picked.length, step: stride },
+    };
+  } catch (error) {
+    return { status: 'failed', reason: String(error?.message ?? error).slice(0, 200) };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
 export async function alignTranscript({
   input, ffmpegPath = 'ffmpeg', segments = [], winStart = 0, winDur = Infinity, maxItems = 16,
 } = {}) {

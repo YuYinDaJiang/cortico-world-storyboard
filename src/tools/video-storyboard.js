@@ -69,6 +69,13 @@ export function videoStoryboardDescribe() {
       + 'v2 is the older 0.3.0 "coverage" engine kept side by side for comparison: candidate frames scored for '
       + 'novelty, then coverage selection. Same input, different cells and different token cost.',
   };
+  parameters.properties.subtitles = {
+    type: 'string',
+    enum: ['off', 'ocr'],
+    description: 'Default off. "ocr" = ignore ASR entirely and read the burned-in subtitles frame by frame '
+      + '(step=1s, bottom band, deduped). Use it for foreign-language audio with Chinese hard subs, '
+      + 'where ASR cannot help. Slow (~0.25s per frame), so scope it with from/to.',
+  };
   parameters.properties.detect = {
     type: 'string',
     enum: ['upstream', 'own'],
@@ -117,6 +124,7 @@ export async function runStoryboardTool(args, { dataDir, cfg }) {
   let options;
   try {
     options = boardOptions(args, { kind: 'board' });
+  if (args.subtitles === 'ocr') options.subtitles = 'ocr';
     if (cfg?.ffmpegPath) options.ffmpegPath = cfg.ffmpegPath;
     if (cfg?.ffprobePath) options.ffprobePath = cfg.ffprobePath;
     if (transcript?.file) options.transcriptFile = transcript.file;
