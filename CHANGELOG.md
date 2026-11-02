@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- 修复：prefetch 下载没带 cookies，登录片会退化成匿名请求（对齐上游 PR #56）。
+
 ## 0.8.10 — 2026-11-02
 
 ### 硬字幕 OCR：能用了

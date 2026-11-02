@@ -249,7 +249,11 @@ export async function prefetchTranscript({
   }
 
   // 2) 本地媒体（页面 URL 会在这里下载/复用，和画面轨同一个 mediaKey）
-  const { path: media } = await resolveInput(input, fetchOptions ?? {});
+  // [World 改动 / 上游 PR #56] cookies 原来只传给了上面的「站点 CC」分支，这里漏了：
+  // 登录片（B 站）会在这一步退化成匿名下载，可能失败或拿到低清源，再 probe 不到音轨 → no-audio。
+  const fetchOpts = { ...(fetchOptions ?? {}) };
+  if (cookies) fetchOpts.cookies = cookies;
+  const { path: media } = await resolveInput(input, fetchOpts);
   const info = await probeVideo(media, { ffprobePath });
   if (!info.hasAudio) return done({ ok: false, source: 'no-audio', segments: [], reason: 'no-audio' });
 
