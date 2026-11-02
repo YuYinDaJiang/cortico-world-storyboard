@@ -325,6 +325,24 @@ try {
   fail(`OCR 真实样本回归抛错：${error instanceof Error ? error.message : String(error)}`);
 }
 
+/* ------------------------------------------- 自适应对齐模式（纯函数） */
+try {
+  const { detectAlignMode } = await import(pathToFileURL(join(pkgDir, 'src/vendor/storyboard/ocr-align.js')).href);
+  const cases = [
+    ['神探狄仁杰这部电视剧很特别', 'pinyin', '中文转写'],
+    ['このドラマはとても特別です', 'time', '日语转写'],
+    ['this is an english line', 'time', '英文转写'],
+    ['', 'time', '空转写'],
+  ];
+  for (const [text, want, why] of cases) {
+    const got = detectAlignMode(text);
+    if (got !== want) fail(`对齐模式：${why} 应为 ${want}，实得 ${got}`);
+    else ok(`对齐模式：${why} → ${got}`);
+  }
+} catch (error) {
+  fail(`对齐模式回归抛错：${error instanceof Error ? error.message : String(error)}`);
+}
+
 /* -------------------------------------------------------------------- 汇总 */
 
 rmSync(scratch, { recursive: true, force: true });

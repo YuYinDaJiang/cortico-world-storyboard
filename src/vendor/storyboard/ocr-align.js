@@ -106,6 +106,14 @@ function lcs(a, b) {
   }
   return out.reverse();
 }
+/** 判断该用哪种对齐：只有「转写是中文」才用拼音，其余（日语/英语/音乐）走时间对齐。 */
+export function detectAlignMode(text) {
+  const chars = [...String(text ?? '')];
+  if (!chars.length) return 'time';
+  const cjk = chars.filter((ch) => CJK.test(ch)).length;
+  const kana = chars.filter((ch) => /[\u3040-\u30ff]/.test(ch)).length;
+  return (cjk / chars.length) >= 0.3 && (kana / chars.length) < 0.1 ? 'pinyin' : 'time';
+}
 const sim = (a, b) => (a.length && b.length ? lcs(a, b).length / Math.max(a.length, b.length) : 0);
 
 /**
@@ -294,14 +302,48 @@ export async function alignTranscript({
     let correctedLines = 0; let correctedChars = 0;
     let usableTotal = 0;
     const warnList = [];
+    let alignMode = 'pinyin';
+
+    // 自适应对齐：拼音对齐只在「转写和字幕都是中文」时成立。
+    // 日语原声 + 中文硬字幕（或 ASR 只出 "MUKIT" 碎片）时，拼音相似度恒为 0，
+    // 整批都会被丢掉 —— 这时降级成时间对齐（按段取 OCR 票），不再用拼音。
+    {
+      // 判定要用**原始文本**：charsOf 只保留 CJK，日语假名会被它吃掉，那样永远判成中文
+      const rawAll = samples.map((s) => String(s.seg.text ?? '')).join('');
+      const chars = [...rawAll];
+      const cjk = chars.filter((ch) => CJK.test(ch)).length;
+      // 日语假名（平假名/片假名）：日语汉字也算 CJK，只看 CJK 比例会把日语误判成中文
+      const kana = chars.filter((ch) => /[\u3040-\u30ff]/.test(ch)).length;
+      const cjkRatio = chars.length ? cjk / chars.length : 0;
+      const kanaRatio = chars.length ? kana / chars.length : 0;
+      alignMode = cjkRatio >= 0.3 && kanaRatio < 0.1 ? 'pinyin' : 'time';
+    }
 
     for (const [k, s] of samples.entries()) {
       const mine = crops.map((c, i) => (c.k === k
         ? { ...c, text: conv2.simp[i], py: conv2.py[i], conf: read.items[i]?.conf ?? 0 }
         : null)).filter(Boolean);
+      const base = [...asrSimp[k]];
+
+      // ---- 时间对齐模式：ASR 不是中文（日语/英语/音乐）→ 直接以 OCR 为准 ----
+      if (alignMode === 'time') {
+        const solid = mine.filter((c) => c.conf >= MIN_CONF && [...c.text].length >= 2)
+          .sort((a, b) => (b.conf - a.conf) || ([...b.text].length - [...a.text].length));
+        usableTotal += solid.length;
+        if (!solid.length) continue;
+        const pick = solid[0];
+        const was = (s.seg.text ?? '').trim();
+        const now = pick.text;
+        if (!now || now === was) continue;
+        correctedLines += 1;
+        correctedChars += [...now].length;
+        changes.push({ from: s.seg.from, was, now, conf: Math.round(pick.conf * 1000) / 1000, align: 'time' });
+        out[s.idx] = { ...s.seg, text: now, ocrFixed: [...now].length, ocrAlign: 'time' };
+        continue;
+      }
+
       const usable = mine.filter((c) => c.conf >= MIN_CONF && sim(asrPy[k], c.py) >= 0.5);
       usableTotal += usable.length;
-      const base = [...asrSimp[k]];
 
       // A2：OCR 明显更完整（conf 高、字数多）→ 只标记，不改句
       const best = mine.slice().sort((a, b) => b.conf - a.conf)[0];
@@ -335,7 +377,7 @@ export async function alignTranscript({
     }
 
     const summary = `ocr: corrected ${correctedLines} lines / ${correctedChars} chars `
-      + `(engine=rapidocr, conf≥0.85)`;
+      + `(engine=rapidocr, conf≥0.85, align=${alignMode})`;
     return {
       status: correctedLines ? 'applied' : 'checked',
       engine: 'rapidocr',
@@ -343,6 +385,7 @@ export async function alignTranscript({
       warns: warnList.slice(0, 5),
       fixed: correctedLines,
       stats: { samples: samples.length, crops: crops.length, usable: usableTotal, a2: a2.length },
+      align: alignMode,
       chars: correctedChars,
       summary,
       changes: changes.slice(0, 5),
