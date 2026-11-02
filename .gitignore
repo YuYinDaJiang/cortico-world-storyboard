@@ -34,3 +34,9 @@ ocr/install.log
 
 # 本地输出/临时
 out/
+
+# 凭据与证书（永不进库）
+.npmrc
+*.pem
+*.key
+*.crt

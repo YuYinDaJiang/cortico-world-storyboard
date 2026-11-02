@@ -45,7 +45,7 @@ scripts/check.mjs   全部通过（ok 14，warn 0）
 1. 启动 Coopanion → 设置窗口 → World：「分镜」能打开，即说明依赖键与目录名对上了。
 2. 验证通过后再清理旧东西（**现在都还留着**）：
    ```powershell
-   Remove-Item "C:\Users\Administrator\AppData\Local\Programs\Coopanion\data\extensions\node_modules\cortico-world-storyboard" -Recurse -Force
+   Remove-Item "%USERPROFILE%\AppData\Local\Programs\Coopanion\data\extensions\node_modules\cortico-world-storyboard" -Recurse -Force
    Remove-Item "D:\deepflash\worlds\cortico-world-storyboard.bak-20261102" -Recurse -Force
    ```
 3. 同步命令默认写到新目录：
@@ -57,9 +57,9 @@ scripts/check.mjs   全部通过（ok 14，warn 0）
 ## 回滚（30 秒）
 
 ```powershell
-Copy-Item "C:\Users\Administrator\AppData\Local\Programs\Coopanion\data\extensions\package.json.bak-20261102" `
-          "C:\Users\Administrator\AppData\Local\Programs\Coopanion\data\extensions\package.json" -Force
-Remove-Item "C:\Users\Administrator\AppData\Local\Programs\Coopanion\data\extensions\node_modules\coopanion-video-storyboard" -Recurse -Force
+Copy-Item "%USERPROFILE%\AppData\Local\Programs\Coopanion\data\extensions\package.json.bak-20261102" `
+          "%USERPROFILE%\AppData\Local\Programs\Coopanion\data\extensions\package.json" -Force
+Remove-Item "%USERPROFILE%\AppData\Local\Programs\Coopanion\data\extensions\node_modules\coopanion-video-storyboard" -Recurse -Force
 # 旧 node_modules 与旧源目录（.bak-20261102）都还在，改名回去即可
 ```
 
