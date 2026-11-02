@@ -292,6 +292,7 @@ export async function alignTranscript({
     const changes = [];
     const a2 = [];
     let correctedLines = 0; let correctedChars = 0;
+    let usableTotal = 0;
     const warnList = [];
 
     for (const [k, s] of samples.entries()) {
@@ -299,6 +300,7 @@ export async function alignTranscript({
         ? { ...c, text: conv2.simp[i], py: conv2.py[i], conf: read.items[i]?.conf ?? 0 }
         : null)).filter(Boolean);
       const usable = mine.filter((c) => c.conf >= MIN_CONF && sim(asrPy[k], c.py) >= 0.5);
+      usableTotal += usable.length;
       const base = [...asrSimp[k]];
 
       // A2：OCR 明显更完整（conf 高、字数多）→ 只标记，不改句
@@ -340,6 +342,7 @@ export async function alignTranscript({
       checked: samples.length,
       warns: warnList.slice(0, 5),
       fixed: correctedLines,
+      stats: { samples: samples.length, crops: crops.length, usable: usableTotal, a2: a2.length },
       chars: correctedChars,
       summary,
       changes: changes.slice(0, 5),

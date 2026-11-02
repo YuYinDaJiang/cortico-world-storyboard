@@ -362,7 +362,7 @@ export async function runStoryboard(opts) {
   let { transcriptInfo } = transcriptResult;
   const { textInSilence } = transcriptResult;
   let ocrReport = null;
-  if (ocr && transcriptInfo?.source === 'asr' && (transcriptInfo.segments?.length ?? 0) > 0) {
+  if (ocr && (transcriptInfo?.source === 'asr' || transcriptInfo?.source === 'file') && (transcriptInfo.segments?.length ?? 0) > 0) {
     ocrReport = await correctByOnScreenSubs({
       input, winStart, winDur, ffmpegPath, segments: transcriptInfo.segments, remoteFrame,
       sourceCopyHeight: sourceInfo ? (sourceInfo.scanActual ?? sourceInfo.scanHeight ?? null) : null,

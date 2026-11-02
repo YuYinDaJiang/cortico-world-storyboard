@@ -706,7 +706,7 @@ export function formatManifest(result, {
       lines.push(`on-screen subs: ${result.ocr.a2.length} line(s) where OCR looks more complete than ASR `
         + '(asr may have dropped words; left unchanged)');
     }
-    if (result.ocr.status === 'applied') {
+    if (result.ocr.status === 'applied' || result.ocr.status === 'checked') {
       // 报告行要短：它每一格都在清单里占 token，而"修了几条"本来就是次要信息
       if (result.ocr.fixed > 0) {
         // 措辞必须撑住"这是抽检"：不能让人读成"整片台词已核对"
@@ -716,8 +716,17 @@ export function formatManifest(result, {
       } else {
         // fixed=0 不能静默：否则“OCR 跑过但一条没改”和“根本没开 OCR”在清单里一模一样。
         // 一行足够，且必须明确“没有一条达到替换门槛”，不能让人读成“已核对”。
-        lines.push(`on-screen subs: spot-checked ${result.ocr.checked} lines, ` +
-          'none met the replace threshold (ASR text left unchanged)');
+        // [World 改动] 再带上诊断：读了几条/几条能和 ASR 对上，避免把“对不上”误读成“没就绪”。
+        const st = result.ocr.stats ?? {};
+        const crops = st.crops ?? null;
+        const usable = st.usable ?? null;
+        const unmatch = usable === 0 && crops > 0
+          ? ' — the on-screen text did not line up with the ASR words (pinyin similarity <0.5), '
+            + 'so nothing was replaced; this is a match failure, not a missing OCR engine'
+          : '';
+        lines.push(`on-screen subs: spot-checked ${result.ocr.checked} lines`
+          + `${crops != null ? ` (${crops} crops, ${usable} usable)` : ''}${unmatch}: `
+          + 'none met the replace threshold (ASR text left unchanged)');
       }
     } else {
       const reason = String(result.ocr.reason ?? result.ocr.status);
