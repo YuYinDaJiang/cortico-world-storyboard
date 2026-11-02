@@ -812,7 +812,7 @@ export async function runStoryboard(opts) {
 
   // textOnly：只算"帧 → 台词"，一帧都不解、一张图都不拼。
   if (textOnly) {
-    const aligned = alignCells(segs, transcriptInfo?.segments ?? []);
+    const aligned = alignCells(segs, transcriptInfo?.segments ?? [], { exclusive: transcriptInfo?.source === 'ocr-subs' });
     const cellsMeta = segs.map((s, i) => {
       const t = aligned[i] ?? null;
       return {
@@ -927,7 +927,7 @@ export async function runStoryboard(opts) {
 
   for (let si = 0; si < sheetRects.length; si += 1) {
     const rects = sheetRects[si];
-    const aligned = alignCells(rects.map((r) => cellFrames[r.seq]), transcriptInfo?.segments ?? []);
+    const aligned = alignCells(rects.map((r) => cellFrames[r.seq]), transcriptInfo?.segments ?? [], { exclusive: transcriptInfo?.source === 'ocr-subs' });
 
     const frames = [];
     const cellMeta = [];

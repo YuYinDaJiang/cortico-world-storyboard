@@ -329,9 +329,29 @@ export const CELL_BREAK_GAP = 1.0;
  * 而不是每句都插 —— 每句都插会让 120 字的台词预算被 `[10:09.4]` 吃掉四分之一。
  * 同时把 `lines`（每条带自己的 from/to）留给渲染层，将来要"一格多行"不必再改这里。
  */
-export function alignCells(cells, segments) {
+export function alignCells(cells, segments, { exclusive = false } = {}) {
+  // exclusive：每句只归一格（OCR 抽字幕用）。按"中点落在哪格"归属，跨界句给重叠最大的那格，
+  // 其他格不再重复列。非 exclusive 保持旧行为（一格可列多句，ASR 长段需要）。
+  let owner = null;
+  if (exclusive) {
+    owner = new Map();
+    for (const s of segments) {
+      const mid = (Number(s.from) + Number(s.to)) / 2;
+      let bestCell = null;
+      let bestOverlap = 0;
+      for (const c of cells) {
+        const ov = Math.min(s.to, c.to) - Math.max(s.from, c.from);
+        if (ov <= 0) continue;
+        if (mid >= c.from && mid < c.to) { bestCell = c; bestOverlap = Infinity; break; }
+        if (ov > bestOverlap) { bestOverlap = ov; bestCell = c; }
+      }
+      owner.set(s, bestCell);
+    }
+  }
   return cells.map((cell) => {
-    const hits = segments.filter((s) => s.to > cell.from && s.from < cell.to);
+    const hits = exclusive
+      ? segments.filter((s) => owner.get(s) === cell)
+      : segments.filter((s) => s.to > cell.from && s.from < cell.to);
     const parts = [];
     for (let i = 0; i < hits.length; i++) {
       if (i > 0 && hits[i].from - hits[i - 1].to >= CELL_BREAK_GAP) {

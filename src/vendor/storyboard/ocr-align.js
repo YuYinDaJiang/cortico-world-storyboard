@@ -251,27 +251,46 @@ export async function extractSubtitles({
     if (!det.ok) return { status: 'failed', reason: 'lines-failed' };
 
     const picked = [];
+    let multiline = 0;
+    let merged = 0;
     for (const [i, it] of (det.items ?? []).entries()) {
       const fh = it.size?.[1] ?? 720;
-      const cand = (it.lines ?? [])
+      const cand0 = (it.lines ?? [])
         .filter((ln) => (ln.y1 - ln.y0) > 0 && (ln.y1 - ln.y0) <= fh * 0.16 && (ln.y0 + ln.y1) / 2 >= fh * 0.55)
-        .filter((ln) => { const t = charsOf(ln.text).join(''); return t.length >= 2 && t.length <= 60; })
-        .sort((a, b) => b.conf - a.conf)[0];
+        .filter((ln) => { const t = charsOf(ln.text).join(''); return t.length >= 2 && t.length <= 60; });
+      if (cand0.filter((ln) => (ln.y1 - ln.y0) > 0).length >= 2) multiline += 1;
+      const cand = cand0.sort((a, b) => b.conf - a.conf)[0];
       if (!cand) continue;
       picked.push({ t: frames[i].t, stride: frames[i].stride, text: charsOf(cand.text).join(''), conf: cand.conf });
     }
 
-    const lines = [];
+    const rawLines = [];
     for (const p of picked) {
-      const last = lines[lines.length - 1];
+      const last = rawLines[rawLines.length - 1];
       const span = p.stride ?? stride;
       if (last && last.text === p.text) { last.to = +(p.t + span).toFixed(2); last.conf = Math.max(last.conf, p.conf); continue; }
-      lines.push({ from: +p.t.toFixed(2), to: +(p.t + span).toFixed(2), text: p.text, conf: Math.round(p.conf * 1000) / 1000 });
+      rawLines.push({ from: +p.t.toFixed(2), to: +(p.t + span).toFixed(2), text: p.text, conf: Math.round(p.conf * 1000) / 1000 });
+    }
+    // 二次归并：同一句被截断成两段（一帧只读到半句）时合成较长的那句
+    const lines = [];
+    for (const cur of rawLines) {
+      const prev = lines[lines.length - 1];
+      const adjacent = prev && (cur.from - prev.to) <= 1.5;
+      const prefixLike = prev && adjacent && (cur.text.startsWith(prev.text) || prev.text.startsWith(cur.text) || cur.text.includes(prev.text) || prev.text.includes(cur.text));
+      if (prefixLike) {
+        const longer = [...cur.text].length >= [...prev.text].length ? cur.text : prev.text;
+        prev.text = longer;
+        prev.to = Math.max(prev.to, cur.to);
+        prev.conf = Math.max(prev.conf, cur.conf);
+        merged += 1;
+        continue;
+      }
+      lines.push({ ...cur });
     }
     return {
       status: lines.length ? 'ok' : 'empty',
       lines,
-      stats: { mode: Array.isArray(times) && times.length ? 'frames' : 'scan', frames: frames.length, read: picked.length, kept: lines.length, dropped: frames.length - picked.length, step: stride, sparse: picked.length < frames.length * 0.5 },
+      stats: { multiline, merged, mode: Array.isArray(times) && times.length ? 'frames' : 'scan', frames: frames.length, read: picked.length, kept: lines.length, dropped: frames.length - picked.length, step: stride, sparse: picked.length < frames.length * 0.5 },
     };
   } catch (error) {
     return { status: 'failed', reason: String(error?.message ?? error).slice(0, 200) };
