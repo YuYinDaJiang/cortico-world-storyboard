@@ -7,7 +7,7 @@ src 与 dist 是**镜像**语义：目标里多出来的文件会被删掉，并
 
 用法（项目根）：
   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-to-extension.ps1
-  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-to-extension.ps1 -Target "D:\somewhere\coopanion-video-storyboard"
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-to-extension.ps1 -Target "D:\somewhere\cortico-world-storyboard"
   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-to-extension.ps1 -DryRun
 
 退出码：0 = 同步后逐文件 SHA-256 一致；2 = 仍有差异；1 = 前置条件不满足。
@@ -15,7 +15,7 @@ src 与 dist 是**镜像**语义：目标里多出来的文件会被删掉，并
 [CmdletBinding()]
 param(
   [string]$Source = '',
-  [string]$Target = (Join-Path $env:LOCALAPPDATA 'Programs\Coopanion\data\extensions\node_modules\coopanion-video-storyboard'),
+  [string]$Target = (Join-Path $env:LOCALAPPDATA 'Programs\Coopanion\data\extensions\node_modules\cortico-world-storyboard'),
   [switch]$DryRun
 )
 

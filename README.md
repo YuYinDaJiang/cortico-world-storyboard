@@ -1,4 +1,4 @@
-# 分镜（coopanion-video-storyboard）
+# 分镜（cortico-world-storyboard）
 
 Coopanion / Cortico 的 World：把视频变成可引用的分镜宫格图，附一份带时间码的清单。
 四个工具（storyboard / probe / locate / zoom）、两套引擎（v1 默认 / v2 可选）、本地 whisper.cpp 转写、
@@ -16,7 +16,7 @@ Coopanion / Cortico 的 World：把视频变成可引用的分镜宫格图，附
 **OCR 的 Python wheel**（清单里逐条带 sha256，缓存到数据目录）。装的时候可以只看它跑到哪一步，
 装完也不会有后台偷偷下载。
 
-> 带图的展示页（安装步骤 + 六组真跑对比 + token 消耗与省钱旋钮）：https://yuyindajiang.github.io/coopanion-video-storyboard/ ——纯静态，浏览器直接打开。
+> 带图的展示页（安装步骤 + 六组真跑对比 + token 消耗与省钱旋钮）：https://yuyindajiang.github.io/cortico-world-storyboard/ ——纯静态，浏览器直接打开。
 
 ## 它能干什么
 
@@ -199,9 +199,9 @@ V2 没有取流层：`engine:"v2"` 时由适配层用 yt-dlp 把片子下到 `v2
 
 1. **先完全退出 Coopanion**（托盘右键 → 退出）。World 只在进程启动时加载，没有热重载。
 2. 把整个目录复制（或做 junction）到扩展目录：
-   `%LOCALAPPDATA%\Programs\Coopanion\data\extensions\node_modules\coopanion-video-storyboard`
+   `%LOCALAPPDATA%\Programs\Coopanion\data\extensions\node_modules\cortico-world-storyboard`
 3. 在 `%LOCALAPPDATA%\Programs\Coopanion\data\extensions\package.json` 的 `dependencies` 里加一行：
-   `"coopanion-video-storyboard": "link:<path-to-this-repo>"`
+   `"cortico-world-storyboard": "link:<path-to-this-repo>"`
    （复制安装则用 `"file:<path-to-this-repo>"`。）
 4. 启动 Coopanion → 设置窗口 → World → 「分镜」→ 启用。
 
@@ -247,7 +247,7 @@ rapidocr 用；可以自己装，也可以用别的方式装 rapidocr（体检�
 ## 卸载
 
 1. 退出 Coopanion。
-2. 删 `...\data\extensions\node_modules\coopanion-video-storyboard`。
+2. 删 `...\data\extensions\node_modules\cortico-world-storyboard`。
 3. 删 `...\data\extensions\package.json` 里那一行依赖。
 4. 可选，删干净状态：
    - `...\data\home\companion\data\storyboard`（`state.json` 与缓存）

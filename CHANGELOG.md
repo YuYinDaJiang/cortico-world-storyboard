@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.0 — 2026-11-03
+
+- 改名：coopanion-video-storyboard → cortico-world-storyboard（coopanion- 是应用前缀，扩展按 cortico-world-* 约定）。功能与 0.8.12 相同，无行为变更。
+- 旧包 coopanion-video-storyboard 已 deprecate，改用本包。
+
 ## 0.8.12 — 2026-11-03
 
 - 安全：清理旧版遗留的 cookies 文件（旧版曾把**全域名** cookie 明文写到 ~/.dsh/bili-cookies-from-browser.txt，新版启动时自动删除）。

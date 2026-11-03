@@ -1,6 +1,6 @@
 {
-  "name": "coopanion-video-storyboard",
-  "version": "0.8.12",
+  "name": "cortico-world-storyboard",
+  "version": "0.9.0",
   "type": "module",
   "description": "Coopanion (Cortico) World: turn a video into citable storyboard sheets with timecodes, local whisper.cpp transcription, on-screen subtitle OCR correction, and a pluggable cut detector.",
   "license": "Apache-2.0",
@@ -64,11 +64,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YuYinDaJiang/coopanion-video-storyboard.git"
+    "url": "git+https://github.com/YuYinDaJiang/cortico-world-storyboard.git"
   },
-  "homepage": "https://github.com/YuYinDaJiang/coopanion-video-storyboard#readme",
+  "homepage": "https://github.com/YuYinDaJiang/cortico-world-storyboard#readme",
   "bugs": {
-    "url": "https://github.com/YuYinDaJiang/coopanion-video-storyboard/issues"
+    "url": "https://github.com/YuYinDaJiang/cortico-world-storyboard/issues"
   },
   "author": "YuYinDaJiang"
 }
