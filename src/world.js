@@ -6,8 +6,9 @@
  * 视频分镜的算法在这一步刻意不搬：先证明「页能注册出来、状态能读能写」。
  */
 import { rm, readdir, stat, mkdir } from 'node:fs/promises';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { checkMediaTools, checkOcr, defaultCacheDir } from './health.js';
 import { ocrInstallPlan } from './asr/ocr-install.js';
 import { loadState, saveState, statePath } from './state.js';
@@ -73,6 +74,22 @@ export class StoryboardWorld {
     this.started = true;
     this.lastState = await loadState(this.dataDir);
     this.asr.log = host?.log ?? null;
+  // [安全 / issue #1] 一次性清理：旧版（<=0.8.11）会把**全域名** cookie 明文写到 ~/.dsh/，
+  // 新版把临时 cookie 写到 <dataDir>/tmp 并在 finally 里删 —— 但进程崩溃会留残骸。
+  // 所以每次挂载都检查这两处，有就删并记日志。
+  try {
+    const legacyDir = process.env.DSH_HOME || join(process.env.USERPROFILE || homedir(), '.dsh');
+    const candidates = [
+      join(legacyDir, 'bili-cookies-from-browser.txt'),
+      join(this.dataDir, 'tmp', 'bili-cookies-from-browser.txt'),
+    ];
+    for (const cookieFile of candidates) {
+      if (!existsSync(cookieFile)) continue;
+      rmSync(cookieFile, { force: true });
+      this.legacyCookieCleaned = true;
+      host?.log?.info?.(`${LABEL}: 已清理遗留的 cookie 文件（${cookieFile}）`);
+    }
+  } catch { /* 删不掉不影响挂载 */ }
     this.asr.prompt = this.asrPromptValue();
     // OCR 用的 Python：优先 World 自己装的 venv（<dataDir>/ocr/venv），这样不需要任何
     // 用户配置文件。已经显式设过环境变量的不覆盖。
@@ -117,6 +134,11 @@ export class StoryboardWorld {
 
   async stop() {
     this.started = false;
+    // [安全 / issue #1] 退出时清掉自己的临时 cookie 文件：不能指望卸载器一定删数据目录
+    try {
+      const tmpCookie = join(this.dataDir, 'tmp', 'bili-cookies-from-browser.txt');
+      if (existsSync(tmpCookie)) rmSync(tmpCookie, { force: true });
+    } catch { /* 删不掉不影响退出 */ }
     this.host = null;
     await this.asr.stop().catch(() => {});
   }

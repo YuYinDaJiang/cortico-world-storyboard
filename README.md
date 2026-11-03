@@ -9,7 +9,12 @@ Coopanion / Cortico 的 World：把视频变成可引用的分镜宫格图，附
 > 算法层位于 `src/vendor/storyboard/` 与 `src/vendor/storyboard-v2/`，各自的 `VENDOR.md` 记录了逐文件的改动。
 
 零运行时依赖（`dependencies` 为空）。外部程序 ffmpeg / ffprobe / yt-dlp / whisper.cpp / Python 都由使用者
-显式安装或指定，包本身不下载任何东西。
+显式安装或指定。
+
+包本身不自动安装任何可执行文件；只有你在服务页点「一键安装」时，才会按需下载
+**whisper.cpp 运行时**（zip，校验 sha256）、**whisper 模型**（ggml-*.bin）和
+**OCR 的 Python wheel**（清单里逐条带 sha256，缓存到数据目录）。装的时候可以只看它跑到哪一步，
+装完也不会有后台偷偷下载。
 
 > 带图的展示页（安装步骤 + 六组真跑对比 + token 消耗与省钱旋钮）：https://yuyindajiang.github.io/coopanion-video-storyboard/ ——纯静态，浏览器直接打开。
 
@@ -29,6 +34,20 @@ Coopanion / Cortico 的 World：把视频变成可引用的分镜宫格图，附
 | `video_zoom` | 把某一格那几秒放大重读 | 字幕、人名、小字看不清时 |
 
 一个真数：一支 24 分钟影视解说，**37 张图、14,208 token** 就能把全片过一遍；同一支片子改用上游默认的切点检测，是 94 张图、36,096 token（1440 秒全片，分五段跑，两组参数相同）。
+
+## 升级与安全（cookies）
+
+**0.8.11 及更早版本会把浏览器里「全域名」的 cookie 明文写到** `%USERPROFILE%\.dsh\bili-cookies-from-browser.txt`。
+
+- **升级到新版**：启动时自动删除该文件，日志里会有一行「已清理遗留的 cookie 文件」
+- **不打算升级**：手动删只是**临时措施**——旧版每次取字幕/调试都会重新落一次盘，删了下次还会有；所以**建议直接升级**
+- 新版行为：只取 `bilibili.com` 域、写到本扩展自己的数据目录、**用完即删**（`try/finally`），启动时还会扫一遍残骸
+
+细节与「为什么不改成完全不落盘」的评估见 [`docs/cookie-handling.md`](docs/cookie-handling.md)。
+
+**删除本扩展时**：Coopanion 的弹窗明确写「不会删除 Memory、已有配置或本地扩展源码」，所以
+`<dataDir>\storyboard\tmp` 会留在盘上，需要手动删除。正常使用时那里不会有 cookie 文件（用完即删），
+只有在下载过程中崩溃才可能残留；下次启动本扩展时会自动清掉那个残骸。
 
 ## 长什么样
 

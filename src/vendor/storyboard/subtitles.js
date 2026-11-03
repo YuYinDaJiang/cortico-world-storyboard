@@ -64,11 +64,19 @@ export async function fetchRemoteSubtitles({
   if (!result.ok && result.reason === 'needs-login') {
     const port = configuredPort();
     if (port) {
-      const fromBrowser = await writeBrowserCookiesFile({ port });
-      if (fromBrowser) {
-        const retry = await fetchOnce({ url, cookies: fromBrowser, timeoutMs, langs });
-        if (retry.ok) result = { ...retry, cookiesFrom: 'browser' };
-        else result = { ...retry, cookiesFrom: 'browser' };
+      // [安全 / issue #1] 写入 → 使用 → 删除，整段用 try/finally 包住：
+      // 异常、提前 return、甚至 fetchOnce 抛错，都必须删掉明文 cookie 文件。
+      let fromBrowser = null;
+      try {
+        fromBrowser = await writeBrowserCookiesFile({ port });
+        if (fromBrowser) {
+          const retry = await fetchOnce({ url, cookies: fromBrowser, timeoutMs, langs });
+          result = { ...retry, cookiesFrom: 'browser' };
+        }
+      } finally {
+        if (fromBrowser) {
+          try { await rm(fromBrowser, { force: true }); } catch { /* 删不掉也不影响结果 */ }
+        }
       }
     }
   }

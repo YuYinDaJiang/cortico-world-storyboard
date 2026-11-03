@@ -8,6 +8,7 @@
  * 所有东西都在 <dataDir>/asr 下：bin / models / tmp / logs。
  */
 import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync, rmSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
@@ -15,6 +16,8 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
 const RUNTIME_URL = 'https://github.com/ggml-org/whisper.cpp/releases/download/v1.7.6/whisper-blas-bin-x64.zip';
+// 运行时 zip 的 sha256（v1.7.6 whisper-blas-bin-x64.zip，2026-11-03 实测下载后计算）
+const RUNTIME_SHA256 = 'adde1afb6e915ae522fffeef117ca178e2561d39487c164f1a7c3899d41b4a1d';
 const MODEL_BASE = 'https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main';
 /**
  * 只有"能从网上下"的档位才写在这里（给「安装依赖」用）。
@@ -185,6 +188,11 @@ export class AsrService {
       if (needRuntime) {
         const zip = join(p.bin, 'whisper-blas-bin-x64.zip');
         await this.download(RUNTIME_URL, zip, (done, total) => onProgress(this.installing = { phase: 'runtime', done, total }));
+        const got = createHash('sha256').update(readFileSync(zip)).digest('hex');
+        if (got !== RUNTIME_SHA256) {
+          rmSync(zip, { force: true });
+          throw new Error(`运行时 zip 校验失败：sha256 ${got.slice(0, 12)}… ≠ 期望 ${RUNTIME_SHA256.slice(0, 12)}…（下载被篡改或 CDN 返回了错误内容，已删除该文件）`);
+        }
         await this.extract(zip, p.bin);
         try { rmSync(zip, { force: true }); } catch { /* 留着也不影响 */ }
         if (!this.binPath()) throw new Error('解压后没找到 whisper-server.exe');

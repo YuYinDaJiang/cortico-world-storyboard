@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.12 — 2026-11-03
+
+- 安全：清理旧版遗留的 cookies 文件（旧版曾把**全域名** cookie 明文写到 ~/.dsh/bili-cookies-from-browser.txt，新版启动时自动删除）。
+- **升级提示（0.8.11 及更早）**：旧版会把**全域名** cookie 明文写到 %USERPROFILE%\.dsh\bili-cookies-from-browser.txt。升级后新版启动会自动删除。**旧版每次取字幕/调试都会重新写一次**，所以手动删只算临时措施、删了还会再有——建议直接升级。
+- 安全：浏览器 cookie 只取 bilibili.com 域，且写入扩展数据目录、用完即删（不再写 ~/.dsh）。
+- 安全：whisper 运行时 zip 下载后校验 sha256（与 OCR wheel 同一模式）。
+- 移除未使用的 launchBrowser（会注册 Windows 计划任务）。
+- cortico.tags 改为词表内的 ideo / external-setup / high-cost（isual 不在词表里）。
+- README 明确「包本身不自动安装可执行文件；一键安装才会按需下载并校验」。
+
 ## 0.8.11 — 2026-11-02
 
 - 修复：prefetch 下载没带 cookies，登录片会退化成匿名请求（对齐上游 PR #56）。

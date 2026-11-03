@@ -28,6 +28,8 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
+import { storyboardTempRoot } from './world-paths.js';
+
 /**
  * 从 `~/.dsh/video.json` 读端口配置。
  *
@@ -36,16 +38,6 @@ import { join } from 'node:path';
  *
  *   { "browserPort": 9333 }
  */
-/** `~/.dsh/video.json` 里的 launchBrowser（默认关：不要替用户随便开程序） */
-export function configuredLaunch(env = process.env) {
-  const home = env.DSH_HOME || join(env.USERPROFILE || env.HOME || homedir(), '.dsh');
-  try {
-    const cfg = JSON.parse(readFileSync(join(home, 'video.json'), 'utf8'));
-    return cfg?.launchBrowser === true;
-  } catch {
-    return false;
-  }
-}
 
 export function configuredPort(env = process.env) {
   const home = env.DSH_HOME || join(env.USERPROFILE || env.HOME || homedir(), '.dsh');
@@ -308,112 +300,6 @@ export async function probeBrowser({ port = DEFAULT_PORT, timeoutMs = 1200 } = {
   };
 }
 
-/**
- * 由**插件自己**把浏览器拉起来。
- *
- * 为什么不能靠外部脚本代劳：我这边的工具进程跑在一个 Job Object 里，
- * 它派生出去的子进程（哪怕 detached + unref）会随这个 job 一起被回收——
- * 实测两次：窗口开起来、7 秒后读得到、再 10 秒整个浏览器连同用户自己的 Edge 一起没了。
- * 而插件是跑在 DSH 里的长期进程，它 spawn 出去的浏览器才活得下来。
- *
- * 所以：想在"打开视频时自动就有端口"，只能是插件来起。
- */
-export function launchBrowser({
-  port = DEFAULT_PORT, url = '', profileDir = null, exe = null, taskScheduler = true,
-} = {}) {
-  // 不能只认 x86 那条：只装了 Chrome 的机器上，自动起浏览器这条路会直接死
-  const EDGE_CANDIDATES = [
-    'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-    'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
-    'C:/Program Files/Google/Chrome/Application/chrome.exe',
-    'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
-  ];
-  const edge = exe
-    ?? EDGE_CANDIDATES.find((q) => { try { return existsSync(q); } catch { return false; } })
-    ?? EDGE_CANDIDATES[0];
-  const profile = profileDir ?? join(homedir(), '.dsh', 'edge-watch');
-  if (!existsSync(edge)) return { ok: false, reason: 'edge-not-found' };
-  mkdirSync(profile, { recursive: true });
-  // **清掉上次的会话**：用独立 profile 冷启动时，Edge 会自动恢复上次开的标签页，
-  // 于是旧视频页 + 陪看页每启动一次就多一份，标签栏越积越乱。
-  // 这里清的是 session 文件，不影响登录态（Cookie / Local Storage 都在别处）。
-  for (const sub of ['Sessions', join('Default', 'Sessions')]) {
-    try { rmSync(join(profile, sub), { recursive: true, force: true }); } catch { /* 删不掉就算了 */ }
-  }
-  const args = [
-    `--remote-debugging-port=${port}`,
-    `--user-data-dir=${profile}`,
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--no-restore-last-session',
-    ...(url ? [url] : []),
-  ];
-
-  // **Windows 上走计划任务**：普通 spawn 出去的进程会留在调用者的 Job Object 里，
-  // 调用方一退出就被回收（实测：窗口开起来、3 秒后整个浏览器消失）。
-  // 计划任务由 Task Scheduler 服务启动，不在那个 job 里，才能真正活下来。
-  if (process.platform === 'win32' && taskScheduler !== false) {
-    // 任务名**不带端口**。以前是 `DSH-Edge-Watch-${port}`，端口一改就多一个任务 ——
-    // 机器上实测已经积了两个（DSH-Edge-Watch / DSH-Edge-Watch-9333），每个都是独立定义，
-    // 用户根本不知道该删哪个。名字固定，端口写进参数里。
-    const task = 'DSH-Edge-Watch';
-
-    // 顺手清掉历史上按端口命名的那些变体，别再长新的
-    try {
-      execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command',
-        "$ErrorActionPreference='SilentlyContinue'; "
-        + "Get-ScheduledTask -TaskName 'DSH-Edge-Watch-*' | Unregister-ScheduledTask -Confirm:$false"],
-      { stdio: 'ignore', windowsHide: true, timeout: 15_000 });
-    } catch { /* 清不掉也不影响启动 */ }
-    const quoted = args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ');
-    const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
-
-    // **顺序：PowerShell cmdlet 在前，schtasks.exe 在后。别调回去。**
-    // 为什么：schtasks.exe 在不少机器的"程序黑名单"里（安全策略直接拦，报 PROGRAM BLOCKED
-    // ... schtasks.exe），失败后只能退回 spawn —— 而 spawn 在 Job 对象里活不过几秒。
-    // 旧顺序（先 schtasks）的实测后果：**每次启动，用户的浏览器都会被关一次**。
-    //
-    // 还有一条：任务**已存在就只 Start，不要 Register**。
-    // Register-ScheduledTask -Force 会重写任务定义，正在跑的那个实例会被一起终止 ——
-    // 表现就是"用户看着看着，浏览器被关了"。只有任务不存在时才创建。
-    try {
-      execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command',
-        `$ErrorActionPreference='Stop'; Start-ScheduledTask -TaskName ${q(task)}`],
-      { stdio: 'ignore', windowsHide: true, timeout: 20_000 });
-      return { ok: true, via: 'scheduled-task', task, port, profile };
-    } catch { /* 任务不存在 → 下面创建 */ }
-
-    try {
-      execFileSync('powershell', ['-NoProfile', '-NonInteractive', '-Command', [
-        `$a = New-ScheduledTaskAction -Execute ${q(edge)} -Argument ${q(quoted)}`,
-        '$s = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit ([TimeSpan]::Zero)',
-        `Register-ScheduledTask -TaskName ${q(task)} -Action $a -Settings $s -Force | Out-Null`,
-        `Start-ScheduledTask -TaskName ${q(task)}`,
-      ].join('; ')], { stdio: 'ignore', windowsHide: true, timeout: 20_000 });
-      return { ok: true, via: 'scheduled-task-new', task, port, profile };
-    } catch { /* 没有 PowerShell / 没有注册任务的权限，往下走 */ }
-
-    // 没有 PowerShell 的机器才用 schtasks.exe（本机它在黑名单里，永远失败）
-    try {
-      execFileSync('schtasks', ['/create', '/tn', task, '/tr', `"${edge}" ${quoted}`,
-        '/sc', 'once', '/st', '23:59', '/f'], { stdio: 'ignore', windowsHide: true, timeout: 15_000 });
-      execFileSync('schtasks', ['/run', '/tn', task], { stdio: 'ignore', windowsHide: true, timeout: 15_000 });
-      return { ok: true, via: 'schtasks', task, port, profile };
-    } catch { /* 没权限就往下走 */ }
-  }
-
-  // 最后兜底：spawn。**它多半活不过调用方退出**（Job Object 会回收整棵子进程树），
-  // 只适合"起完立刻读一次"的场景。看到 via:'spawn' 就知道浏览器随时会消失。
-  try {
-    const child = spawn(edge, args, { detached: true, stdio: 'ignore' });
-    child.unref();
-    return { ok: true, via: 'spawn', pid: child.pid, port, profile };
-  } catch (e) {
-    return { ok: false, reason: String(e?.message ?? e).slice(0, 120) };
-  }
-}
-
-/** 等端口起来（最多等 timeoutMs），返回是否起来了 */
 export async function waitForPort(port, { timeoutMs = 8000, stepMs = 400 } = {}) {
   const until = Date.now() + timeoutMs;
   while (Date.now() < until) {
@@ -472,7 +358,13 @@ export async function readBrowserCookies({ port = DEFAULT_PORT, timeoutMs = 4000
     ws.onerror = () => { clearTimeout(timer); finish(null); };
     ws.onclose = () => { clearTimeout(timer); finish(null); };
   });
-  return Array.isArray(cookies) ? cookies : null;
+  if (!Array.isArray(cookies)) return null;
+  // [安全 / issue #1] CDP 的 Storage.getCookies 是**浏览器级**的，会带出所有站点的 cookie。
+  // 只保留 bilibili.com（含子域），其余一律丢弃 —— 这些只给 yt-dlp 下 B 站片用。
+  return cookies.filter((c) => {
+    const d = String(c?.domain ?? '').replace(/^\./, '').toLowerCase();
+    return d === 'bilibili.com' || d.endsWith('.bilibili.com');
+  });
 }
 
 /** cookie 数组 → Netscape cookies.txt 文本（yt-dlp 认这个格式） */
@@ -493,7 +385,8 @@ export function cookiesToNetscape(cookies) {
 export async function writeBrowserCookiesFile({ port = DEFAULT_PORT, dir = null } = {}) {
   const cookies = await readBrowserCookies({ port });
   if (!cookies || cookies.length === 0) return null;
-  const target = dir ?? join(homedir(), '.dsh', 'bili-cookies-from-browser.txt');
+  // [安全] 不再写 ~/.dsh（那是宿主全局目录）；落到本扩展自己的数据目录，调用方用完即删
+  const target = dir ?? join(storyboardTempRoot(), 'bili-cookies-from-browser.txt');
   try {
     mkdirSync(join(target, '..'), { recursive: true });
     writeFileSync(target, cookiesToNetscape(cookies), 'utf8');
