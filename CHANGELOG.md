@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.1 — 2026-11-03
+
+- 简介（zh/en/top-level）补充消耗参考：24 分钟整片 ≈ 37 张分镜图 / ≈ 14.2k token（384 token/图）。标签不变（video / external-setup / high-cost）。
+
 ## 0.9.0 — 2026-11-03
 
 - 改名：coopanion-video-storyboard → cortico-world-storyboard（coopanion- 是应用前缀，扩展按 cortico-world-* 约定）。功能与 0.8.12 相同，无行为变更。

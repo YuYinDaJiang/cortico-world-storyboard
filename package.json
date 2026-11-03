@@ -1,8 +1,8 @@
 {
   "name": "cortico-world-storyboard",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "type": "module",
-  "description": "Coopanion (Cortico) World: turn a video into citable storyboard sheets with timecodes, local whisper.cpp transcription, on-screen subtitle OCR correction, and a pluggable cut detector.",
+  "description": "Coopanion (Cortico) World: turn a video into citable storyboard sheets with timecodes, local whisper.cpp transcription, on-screen subtitle OCR correction, and a pluggable cut detector. Cost: a 24-minute film came to ~37 sheets, ~14.2k tokens (384 tokens per sheet).",
   "license": "Apache-2.0",
   "engines": {
     "node": ">=22"
@@ -41,11 +41,11 @@
     "locales": {
       "zh": {
         "displayName": "分镜",
-        "description": "把视频变成一张可寻址的分镜宫格图：每格带编号与时间码，台词挂在对应格子上。管理页在「服务」：体检 ffmpeg/ffprobe、配置 ASR 端点、查看与清空缓存。"
+        "description": "把视频变成一张可寻址的分镜宫格图：每格带编号与时间码，台词挂在对应格子上。管理页在「服务」：体检 ffmpeg/ffprobe、配置 ASR 端点、查看与清空缓存。 消耗参考：24 分钟整片约 37 张分镜图、约 1.4 万 token（384 token/图）。"
       },
       "en": {
         "displayName": "Storyboard",
-        "description": "Turn a video into one addressable storyboard sheet: numbered cells with timecodes and their lines. The Service page checks ffmpeg/ffprobe, configures the ASR endpoint, and shows or clears the cache."
+        "description": "Turn a video into one addressable storyboard sheet: numbered cells with timecodes and their lines. The Service page checks ffmpeg/ffprobe, configures the ASR endpoint, and shows or clears the cache. Cost: a 24-minute film came to ~37 sheets, ~14.2k tokens (384 tokens per sheet)."
       }
     },
     "tags": [
