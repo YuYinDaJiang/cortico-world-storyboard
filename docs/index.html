@@ -267,6 +267,27 @@ D:\deepflash\out\ocr-evidence\sub-5-45.0s.png</code></pre>
 </table>
 <p>反过来说，<strong>最省的一步不是这些旋钮，是别请求你不需要的时间段</b>：只取 30 秒比你整片跑完再压档便宜得多。</p>
 
+<h2>8. 工具说明精简：少占上下文</h2>
+<p>工具描述（<code>tool descriptions</code>）每轮请求都会常驻上下文。0.9.1 之前五个工具的说明合计
+<b>3902 字符</b>、<code>parameters</code> JSON 合计 <b>16287 字符</b>，一大半在讲「为什么这么设计」「举例」
+「边界情况」——模型每次开口都要先读一遍。</p>
+<p>0.9.2 的做法：每个工具只留 <b>参数清单 + 一句什么时候用</b>（决策线索保留：先 <code>video_probe</code>
+再切格、6 格还是 12 格、幻灯片用 <code>integral:false</code>、外语硬字幕用 <code>subtitles:"ocr"</code>）；
+长解释整段搬进 README 的「工具细节」；新增 <code>storyboard_help({topic})</code> 按主题只取回那一小节。</p>
+<table>
+  <tr><th>指标</th><th>0.9.1</th><th>0.9.2</th><th>变化</th></tr>
+  <tr><td>五个工具的 description 合计</td><td>3902 字符</td><td><b>1671 字符</b>（含新增 help）</td><td><b>−57%</b></td></tr>
+  <tr><td>parameters JSON 合计</td><td>16287 字符</td><td>15889 字符</td><td>−2.4%</td></tr>
+  <tr><td>工具数</td><td>5</td><td>6</td><td>+ <code>storyboard_help</code></td></tr>
+</table>
+<pre><code>{ "topic": "storyboard" }   // 参数、engine、transcript
+{ "topic": "choose" }       // 该用哪个：probe 先跑、6 格 vs 12 格
+{ "topic": "subtitles" }    // ocr / ocr-dense 的区别与代价</code></pre>
+<p>可用 topic：<code>storyboard</code> / <code>engine</code> / <code>transcript</code> / <code>subtitles</code> /
+<code>detect</code> / <code>precomputed</code> / <code>integral</code> / <code>tier</code> / <code>probe</code> /
+<code>locate</code> / <code>zoom</code> / <code>status</code> / <code>choose</code>。取不到的主题会返回可用列表，
+不会把整份 README 塞回上下文。</p>
+
 <footer>
   <p>这是 <a href="https://github.com/SAOS-3624/dsh-video-storyboard">SAOS-3624/dsh-video-storyboard</a> 0.6.0
   （提交 <code>e124ae6</code>）的 fork，按其 <b>Apache-2.0</b> 许可分发：上游 <code>LICENSE</code> 与

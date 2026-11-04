@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.2 — 2026-11-04
+
+- **工具说明精简**：五个工具的 `description` 合计 **3902 → 1671 字符（−57%）**，`parameters` JSON
+  **16287 → 15889 字符**。每个工具只留「参数 + 一句什么时候用」，长解释整段搬进 README 的「工具细节」。
+- **新增 `storyboard_help({topic})`**：按主题取回 README 的**单节**（storyboard / engine / transcript /
+  subtitles / detect / precomputed / integral / tier / probe / locate / zoom / status / choose），
+  不把整份 README 塞回上下文。
+- 行为未改：只动文本与新增工具，工具参数与返回值保持原样。
+
 ## 0.9.1 — 2026-11-03
 
 - 简介（zh/en/top-level）补充消耗参考：24 分钟整片 ≈ 37 张分镜图 / ≈ 14.2k token（384 token/图）。标签不变（video / external-setup / high-cost）。

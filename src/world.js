@@ -14,6 +14,7 @@ import { ocrInstallPlan } from './asr/ocr-install.js';
 import { loadState, saveState, statePath } from './state.js';
 import { videoStoryboardTool } from './tools/video-storyboard.js';
 import { extraTools } from './tools/video-extra.js';
+import { helpTool } from './tools/help.js';
 import { AsrService, DEFAULT_ASR_PROMPT } from './asr/service.js';
 
 /** 读本包 package.json 的版本号；读不到就报 'unknown'（不影响任何功能）。 */
@@ -155,11 +156,13 @@ export class StoryboardWorld {
     this.toolDefs ??= [
       {
         name: 'storyboard_status',
-        description: 'Report what the storyboard World can do right now: whether ffmpeg and ffprobe are reachable, where the cache is and how big it is, and whether an ASR endpoint is configured. Read-only. Use it when the person asks why a video cannot be turned into a storyboard yet.',
+        description: 'Report readiness: ffmpeg/ffprobe reachable, cache location and size, ASR endpoint configured. '
+          + 'Read-only. Use it when a video cannot be processed, or to check settings before a long run.',
         tags: ['read'],
         parameters: { type: 'object', additionalProperties: false, properties: {} },
         handler: async () => this.statusText(),
       },
+      helpTool(),
       videoStoryboardTool({ dataDir: this.dataDir, cfg: this.cfg }),
       ...extraTools({
         dataDir: this.dataDir,

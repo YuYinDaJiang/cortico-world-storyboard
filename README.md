@@ -253,13 +253,38 @@ rapidocr 用；可以自己装，也可以用别的方式装 rapidocr（体检�
    - `...\data\home\companion\data\storyboard`（`state.json` 与缓存）
    - `...\data\home\companion\config.json` 里的 `worlds.storyboard` 段
 
-## 已知问题 / Known issues
+## 工具说明精简（0.9.2 已修复）
 
-**工具说明文本过长 / Tool descriptions are too long.**
-本扩展的工具描述（`tool descriptions`，模型每次请求都会带上）篇幅偏大，会占用可观的上下文窗口，
-挤占真正用于看片和对话的 token。计划精简措辞与参数说明，**待修复**。
-The tool descriptions shipped with this extension are verbose; they consume model context window on
-every request. Trimming them is planned and **not fixed yet**.
+**问题**：工具描述（`tool descriptions`）每轮请求都会常驻上下文。0.9.1 之前，
+五个工具的 `description` 合计 **3902 字符**，`parameters` 的 JSON 合计 **16287 字符**，
+一大半讲的是「为什么这么设计」「举例」「边界情况」——模型每次开口都要先读一遍，白烧 token。
+
+**做法**：
+
+1. 每个工具的 `description` 只留 **参数清单 + 一句什么时候用它**；决策线索保留
+   （先 `video_probe` 再切格、6 格还是 12 格、幻灯片用 `integral:false`、外语硬字幕用 `subtitles:"ocr"`）。
+2. 长解释（算法细节、transcript 规则、precomputed 语义…）整段搬进本 README 的「工具细节」各节。
+3. 新增工具 **`storyboard_help({ topic })`**：按主题只取回**那一小节**，不把整份 README 塞回上下文。
+
+**效果**：
+
+| 指标 | 0.9.1 | 0.9.2 | 变化 |
+|---|---|---|---|
+| 五个工具的 `description` 合计 | 3902 字符 | **1671 字符**（含新增的 help 工具） | **−57%** |
+| `parameters` JSON 合计 | 16287 字符 | **15889 字符** | −2.4% |
+| 工具数 | 5 | 6 | +`storyboard_help` |
+
+### `storyboard_help` 怎么用
+
+```jsonc
+{ "topic": "storyboard" }   // 工具细节：参数、engine、transcript
+{ "topic": "choose" }       // 该用哪个：probe 先跑、6 格 vs 12 格
+{ "topic": "subtitles" }    // ocr / ocr-dense 的区别与代价
+```
+
+可用 topic：`storyboard`（别名 `story` / `board`）、`engine`、`v2`、`transcript`、`subtitles` / `ocr`、
+`detect`、`precomputed`、`integral`、`tier`、`probe`、`locate`、`zoom`、`status`、`choose` / `which`。
+取不到的主题会返回可用列表，不会回灌整份 README。
 
 ## 自检
 
@@ -269,3 +294,45 @@ node scripts/check.mjs
 
 覆盖：manifest 合法性、`create()` 是否纯净、实例 id、工具形状、`webUi()` 是否声明了 `service`、
 浏览器产物是否真的导出同名面板、`state → save → state` 回路、`state.json` 落盘、`clearCache`。
+
+## 工具细节：video_storyboard（engine / transcript / subtitles / detect / precomputed）
+
+**engine**：`v1`（默认）是当前主线——按切点密度分档，再按行装箱；`v2` 是 0.3.0 的旧「coverage」引擎（候选帧按新颖度打分再做覆盖选择）。同一输入两套的格子和 token 成本不同，缓存/下载也各自独立，切换要各扫一次。v2 不支持 `transcriptFile`。
+
+**transcript / transcriptFile**：本地文件请显式传 `transcriptFile`（SRT 或 JSON）——**不会**在视频旁边自动找同名 `.srt`。`.ass` 不支持，先 `ffmpeg -i x.ass x.srt` 转成 SRT 再传。不传时按「内嵌字幕轨 > 本地 ASR」的顺序取。
+
+**subtitles**：`off`（默认）。`ocr` = 不用 ASR，直接对**本次分镜取到的帧**做底部字幕带 OCR（按帧去重合并，零额外扫描）；`ocr-dense` = 按 `ocrStep` 秒（默认 1，范围 0.25–5）独立扫描整段，整集出台词用。两者都适用于「外语原声 + 中文硬字幕」。慢（`ocr` 约 0.25 s/帧），一定要用 `from/to` 圈范围。回执会写 `align=pinyin|time`：中文转写走拼音对齐，日语/英语转写自动降级成时间对齐。
+
+**detect**：`upstream`（默认，vendored scanShots）；`own` = 自带检测器：裁掉底部字幕带 → 归一化亮度直方图差 → 三点一致性（前后要有安静帧）→ 合并小于 1.5 s 的短镜头。只在 `precomputed:"auto"` + 本地文件 + v1 时生效，回执里写 `precomputed: miss→built(<key>, own)`。
+
+**precomputed**：`off`（默认）正常扫描；`auto` 对「同一个文件 + 同一个窗口」复用之前落盘的扫描结果（切点 / 逐帧分数 / 指纹），跳过整段解码；没命中就跑一次正常扫描并落盘。回执写 `off / hit(<key>) / miss→built(<key>)`。整片分析一次之后，换格数、换窗口都只是重新拼图。
+
+**integral / integralSeconds**：长镜头内部按「画面变化量」补采样帧，补出来的时刻不是真切点（伪切点），静态画面里会把一张幻灯片切成好几格。幻灯片/讲课建议 `integral:false`；`integralSeconds` 越小补得越多（默认 6）。
+
+**tier / tierMap**：`tier` 定每格尺寸策略，`tierMap` 按段序号覆盖（如 `{"3":2,"4":1}`，数字越大格子越大，1 = 整幅）。清单会回显 `tierMap=3->2,4->1`。
+
+## 工具细节：video_probe
+
+只读容器头：时长、分辨率、音轨、字幕轨。不出图、不下载（URL 只做 head 探测）。不认识的文件先跑它，判断值不值得读、该取哪一段；对远程 URL 它比 `video_storyboard` 便宜得多。
+
+## 工具细节：video_locate
+
+只在台词里找「这句话在第几秒」，纯文本返回，不取帧。需要台词来源：显式 `transcriptFile`，或先跑一次 `video_storyboard`（它会把转写落进 locate 的缓存）。找不到时会说清是「没装 ASR / 装了没起 / 起了没听到话」中的哪一种。
+
+## 工具细节：video_zoom
+
+把某一格（`cellId`，来自上一次 storyboard）或某段 `from/to` 重新读一遍：格子更少、每格更大。字幕、人名、小字看不清时用。`cellId` 找不到格子表时会让你先跑 `video_storyboard`，或直接给 `from/to`。
+
+## 工具细节：storyboard_status
+
+只读：ffmpeg/ffprobe 能不能用、缓存在哪多大、ASR 端点配了没有，以及 OCR/Python 体检行。视频处理不了、或长跑之前想确认设置时用它。
+
+## 工具选择：先 probe 再切格，6 格还是 12 格
+
+- **不认识的文件**：先 `video_probe`（便宜）→ 再决定窗口和 `maxFrames`。
+- **只要「这段大概讲了什么」**：`maxFrames: 6`（或 `strategy:"skim"`），格子大、token 少。
+- **需要引用原话 / 核对细节**：`maxFrames: 12`（或 `detail:"high"`），格子多、能看清字。
+- **知道确切时间**：直接用 `video_zoom({from,to})`，不要为了看 5 秒跑整段分镜。
+- **只要台词不要图**：`textOnly: true`，或干脆用 `video_locate`。
+- **幻灯片 / 讲课**：`integral: false`，一格一句话。
+- **外语原声 + 中文硬字幕**：`subtitles: "ocr"`（复用分镜帧）或 `"ocr-dense"`（整集切台词）。

@@ -65,41 +65,35 @@ export function videoStoryboardDescribe() {
   parameters.properties.engine = {
     type: 'string',
     enum: ['v1', 'v2'],
-    description: 'Which algorithm runs. v1 (default) is the current main line: cut-driven tiers, then row packing. '
-      + 'v2 is the older 0.3.0 "coverage" engine kept side by side for comparison: candidate frames scored for '
-      + 'novelty, then coverage selection. Same input, different cells and different token cost.',
+    description: 'v1 (default) = cut-driven tiers; v2 = older coverage engine (separate cache, one scan per switch). '
+      + 'storyboard_help({topic:"engine"}) for details.',
   };
   parameters.properties.subtitles = {
     type: 'string',
     enum: ['off', 'ocr', 'ocr-dense'],
-    description: 'Default off. "ocr" = ignore ASR entirely and read the burned-in subtitles frame by frame '
-      + '(step=1s, bottom band, deduped). Use it for foreign-language audio with Chinese hard subs, '
-      + 'where ASR cannot help. Slow (~0.25s per frame), so scope it with from/to.',
+    description: 'off (default) | ocr = read burned-in subtitles from the storyboard frames | ocr-dense = scan every '
+      + 'ocrStep seconds. Both are for foreign-language audio with hard subs. storyboard_help({topic:"subtitles"}).',
   };
   parameters.properties.detect = {
     type: 'string',
     enum: ['upstream', 'own'],
-    description: 'Which cut detector the analysis asset is built with (only with precomputed:"auto", v1, local files). '
-      + '"upstream" (default) = the vendored scanShots. "own" = our detector: crops the bottom subtitle band, '
-      + 'compares normalized luma histograms, then requires the change to be flanked by quiet frames '
-      + '(three-point consistency) and merges shots shorter than 1.5 s. '
-      + 'The receipt names the detector: precomputed: miss→built(<key>, own).',
+    description: 'upstream (default) | own = bottom-band histogram + three-point consistency, merges shots <1.5 s. '
+      + 'Only with precomputed:"auto" on local files. storyboard_help({topic:"detect"}).',
   };
   parameters.properties.precomputed = {
     type: 'string',
     enum: ['off', 'auto'],
-    description: 'Analysis-asset reuse (v1 only, local files only). "off" (default) scans normally. '
-      + '"auto" reuses a previously dumped scan for the same file+window (cuts / per-frame scores / fingerprints), '
-      + 'skipping the whole decode; a miss runs one normal scan and saves it for next time. '
-      + 'The receipt says which path ran: off / hit(<key>) / miss→built(<key>).',
+    description: 'off (default) | auto = reuse a dumped scan for the same file+window, skipping the decode. '
+      + 'The receipt names the path: off / hit(<key>) / miss→built(<key>). storyboard_help({topic:"precomputed"}).',
   };
   return {
     name: spec.name,
-    description: `${spec.description}\n\nENGINE: pass engine:"v2" to run the older coverage engine instead of the default v1. `
-      + 'Caches and downloads of the two engines are separate, so switching costs one scan each.\n\n'
-      + 'TRANSCRIPT: for a local file, pass transcriptFile explicitly (SRT or JSON). '
-      + 'It is never discovered next to the video. .ass is not supported: convert it first with '
-      + '`ffmpeg -i x.ass x.srt` and pass the .srt. (v2 has no transcriptFile support.)',
+    description: 'Storyboard a video window: grid images plus a timestamped manifest. Params: input; from/to (seconds, '
+      + 'default whole file, ~15 min max per call); maxFrames (cap; 6 to skim, 12 when you must quote lines); detail '
+      + 'low|med|high; tier/tierMap; integral+integralSeconds (extra frames inside long shots; set integral:false for '
+      + 'slides/lectures); precomputed off|auto; detect upstream|own; subtitles off|ocr|ocr-dense; transcriptFile '
+      + '(SRT/JSON, never auto-discovered); engine v1|v2. Run video_probe first on unknown files. storyboard_help({topic:"storyboard"}) '
+      + 'for the long version.',
     tags: ['read', 'snapshot'],
     parameters,
     summary: {

@@ -120,10 +120,21 @@ function mediaPaths(cfg) {
   };
 }
 
+/** 精简后的工具说明（长解释搬去 README，用 help({topic}) 取回）。 */
+const SHORT_DESC = {
+  video_probe: 'Read the container header only: duration, resolution, audio/subtitle tracks. No frames decoded, '
+    + 'no download. Param: input. Use it first on an unknown file to decide whether it is worth storyboarding '
+    + 'and which window to pick.',
+  video_locate: 'Find when a line was said, text only (no frames). Params: input; query; from/to; transcriptFile. '
+    + 'Run video_storyboard once first — it fills the transcript cache locate reads.',
+  video_zoom: 'Re-read one stretch larger: fewer, bigger cells. Params: cellId (from the last storyboard) or '
+    + 'from/to; maxFrames; detail. Use it when text inside a cell is too small to read.',
+};
+
 function makeTool(spec, kind, handler) {
   return {
     name: spec.name,
-    description: spec.description,
+    description: SHORT_DESC[spec.name] ?? spec.description,
     tags: tagsOf[kind],
     parameters: toJsonSchema(spec.parameters),
     handler,
