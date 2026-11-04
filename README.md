@@ -190,6 +190,14 @@ V2 没有取流层：`engine:"v2"` 时由适配层用 yt-dlp 把片子下到 `v2
 
 三者都不由本包下载或安装。找不到时管理页会指名道姓，`video_storyboard` 也会在失败回执里说清缺哪个。
 
+**支持哪些输入**（`input` 参数）：
+
+- ✅ 完整链接：`https://www.bilibili.com/video/BV1GJ411x7h7`
+- ✅ B 站短链：`https://b23.tv/xxxxxxx`
+- ✅ QQ 卡片里的短链（同上，内部会先展开成完整页面再交给 yt-dlp）
+- ✅ 本地文件路径
+- ❌ **裸 BV 号不行**（如 `BV1GJ411x7h7`）：它不含协议，会被当成本地文件名交给 ffprobe，报「找不到文件」。请贴完整链接或短链。
+
 本机文件认 `.srt` 与 JSON（自动识别形制）；`.ass` 不解析，直接报错并要求先
 `ffmpeg -i x.ass x.srt`。**不会去同目录找同名`.srt`**——要台词就显式传 `transcriptFile`。
 

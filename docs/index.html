@@ -98,6 +98,8 @@ wheel 缓存 / 离线 pip），已存在的逐项跳过。<strong>OCR 需要 Pyt
 
 // ③ 只要图、不要台词（最快）
 { "input": "D:/media/clip.mp4", "transcript": "off" }</code></pre>
+<p><code>input</code> 可以贴完整链接、<code>b23.tv</code> 短链（QQ 卡片里的短链也行）或本地路径；
+<b>裸 BV 号不行</b>（会被当成本地文件名交给 ffprobe）。</p>
 
 <h2>1. 积分伪切点：开 vs 关</h2>
 <p>同一支视频（0–60s）、同一套参数，只切 <code>integral</code>。<code>true</code> 时会在长镜头内部
