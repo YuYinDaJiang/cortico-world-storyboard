@@ -2,7 +2,7 @@
   "name": "cortico-world-storyboard",
   "version": "0.9.1",
   "type": "module",
-  "description": "Coopanion (Cortico) World: turn a video into citable storyboard sheets with timecodes, local whisper.cpp transcription, on-screen subtitle OCR correction, and a pluggable cut detector. Cost: a 24-minute film came to ~37 sheets, ~14.2k tokens (384 tokens per sheet).",
+  "description": "Coopanion (Cortico) World: turn a video into citable storyboard sheets with timecodes, local whisper.cpp transcription, on-screen subtitle OCR correction, and a pluggable cut detector. Cost: a 24-minute film came to ~37 sheets, ~14.2k tokens (384 tokens per sheet). Known issue: tool descriptions are verbose and eat context window; trimming planned.",
   "license": "Apache-2.0",
   "engines": {
     "node": ">=22"

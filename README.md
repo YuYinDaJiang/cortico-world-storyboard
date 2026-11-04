@@ -253,6 +253,14 @@ rapidocr 用；可以自己装，也可以用别的方式装 rapidocr（体检�
    - `...\data\home\companion\data\storyboard`（`state.json` 与缓存）
    - `...\data\home\companion\config.json` 里的 `worlds.storyboard` 段
 
+## 已知问题 / Known issues
+
+**工具说明文本过长 / Tool descriptions are too long.**
+本扩展的工具描述（`tool descriptions`，模型每次请求都会带上）篇幅偏大，会占用可观的上下文窗口，
+挤占真正用于看片和对话的 token。计划精简措辞与参数说明，**待修复**。
+The tool descriptions shipped with this extension are verbose; they consume model context window on
+every request. Trimming them is planned and **not fixed yet**.
+
 ## 自检
 
 ```
